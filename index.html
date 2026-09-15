@@ -1,1 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Spotify Lite</title>
+    
+    <!-- PWA 與 iOS 全螢幕設定 -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#121212">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SpotifyLite">
+    <link rel="apple-touch-icon" href="https://via.placeholder.com/192/1DB954/000000?text=Music">
 
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- 頂部搜尋欄 -->
+        <header class="search-bar">
+            <input type="text" id="searchInput" placeholder="搜尋歌曲、歌手..." onkeyup="if(event.key==='Enter') searchMusic()">
+            <button onclick="searchMusic()">搜尋</button>
+        </header>
+
+        <!-- 主要內容區 -->
+        <main class="content">
+            <!-- 我的最愛 -->
+            <section class="section">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h2>❤️ 我的最愛</h2>
+                    <button onclick="playAllFavorites()" style="background:#1DB954; color:#000; border:none; padding:6px 14px; border-radius:20px; font-weight:bold; cursor:pointer;">▶ 播放全部</button>
+                </div>
+                <div id="favorites-list" class="song-list"></div>
+            </section>
+
+            <hr style="border: 0.5px solid #282828; margin: 16px 0;">
+
+            <!-- 搜尋結果 -->
+            <section class="section">
+                <h2>搜尋結果</h2>
+                <div id="results" class="song-list"></div>
+            </section>
+
+            <hr style="border: 0.5px solid #282828; margin: 16px 0;">
+
+            <!-- 待播清單 -->
+            <section class="section">
+                <h2>待播清單 (Queue)</h2>
+                <div id="queue-list" class="song-list"></div>
+            </section>
+        </main>
+
+        <!-- 底部 Spotify 播放器列 -->
+        <footer class="player-bar">
+            <div class="now-playing">
+                <img id="cover" src="https://via.placeholder.com/56" alt="Cover">
+                <div class="info">
+                    <div id="track-title" class="title">未播放歌曲</div>
+                    <div id="track-artist" class="artist">--</div>
+                </div>
+            </div>
+
+            <div class="player-center">
+                <div class="controls">
+                    <button onclick="playPrev()" title="上一首">⏮</button>
+                    <button id="play-btn" onclick="togglePlay()" title="播放/暫停">▶</button>
+                    <button onclick="playNext()" title="下一首">⏭</button>
+                    <audio id="audio-element" playsinline></audio>
+                </div>
+                
+                <div class="progress-container">
+                    <span id="current-time" class="time">0:00</span>
+                    <input type="range" id="progress-bar" value="0" min="0" max="100" step="0.1">
+                    <span id="total-time" class="time">0:00</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+
+    <!-- 註冊 Service Worker -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js').catch(err => console.error('PWA 註冊失敗:', err));
+        });
+      }
+    </script>
+</body>
+</html>
