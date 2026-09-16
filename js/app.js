@@ -26,8 +26,6 @@ function toggleFavorite(songData) {
         favorites.splice(index, 1);
     }
     saveFavorites();
-    const query = document.getElementById('searchInput').value;
-    if (query) searchMusic();
 }
 
 function playAllFavorites() {
@@ -38,45 +36,69 @@ function playAllFavorites() {
     loadAndPlayCurrent();
 }
 
-// 搜尋 logic
+// 搜尋 logic（已修復渲染欄位對齊問題）
 async function searchMusic() {
     const query = document.getElementById('searchInput').value;
-    if (!query) return;
+    if (!query || !query.trim()) return;
 
     const resultsContainer = document.getElementById('results');
-    resultsContainer.innerHTML = '<p style="color:#b3b3b3;">搜尋中...</p>';
+    resultsContainer.innerHTML = '<p style="color:#b3b3b3;">搜尋中，請稍候...</p>';
 
     const items = await fetchSearchResults(query);
     resultsContainer.innerHTML = '';
 
+    if (!items || items.length === 0) {
+        resultsContainer.innerHTML = '<p style="color:#b3b3b3;">找不到相關歌曲，請嘗試更換關鍵字。</p>';
+        return;
+    }
+
     items.forEach(item => {
-        if (item.type === 'stream') {
-            const videoId = item.url.replace('/watch?v=', '');
-            const songData = {
-                id: videoId,
-                title: item.title,
-                artist: item.uploaderName,
-                cover: item.thumbnail
-            };
+        // 兼容不同的 videoId 欄位格式
+        const videoId = item.videoId || (item.url ? item.url.replace('/watch?v=', '') : '');
+        if (!videoId) return;
 
-            const isFav = favorites.some(s => s.id === songData.id);
+        const songData = {
+            id: videoId,
+            title: item.title || "未知歌名",
+            artist: item.uploaderName || item.artist || "未知歌手",
+            cover: item.thumbnail || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
+        };
 
-            const div = document.createElement('div');
-            div.className = 'song-item';
-            div.innerHTML = `
-                <img src="${songData.cover}">
-                <div style="flex:1;">
-                    <div class="title">${songData.title}</div>
-                    <div class="uploader">${songData.artist}</div>
-                </div>
-                <button onclick="event.stopPropagation(); toggleFavorite(${JSON.stringify(songData).replace(/"/g, '&quot;')})" style="background:none; border:none; font-size:18px; cursor:pointer; margin-right:8px;">
-                    ${isFav ? '❤️' : '🤍'}
-                </button>
-                <button onclick="event.stopPropagation(); addToQueue(${JSON.stringify(songData).replace(/"/g, '&quot;')})" style="background:#282828; color:#fff; border:none; padding:6px 12px; border-radius:20px; cursor:pointer;">+ 加到清單</button>
-            `;
-            div.onclick = () => playSingleSong(songData);
-            resultsContainer.appendChild(div);
-        }
+        const isFav = favorites.some(s => s.id === songData.id);
+
+        const div = document.createElement('div');
+        div.className = 'song-item';
+        
+        // 安全處理 JSON 字串，避免引號引發 JS 錯誤
+        const safeSongJson = JSON.stringify(songData).replace(/'/g, "&apos;").replace(/"/g, '&quot;');
+
+        div.innerHTML = `
+            <img src="${songData.cover}" onerror="this.src='https://via.placeholder.com/48'">
+            <div style="flex:1; overflow:hidden;">
+                <div class="title" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${songData.title}</div>
+                <div class="uploader" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${songData.artist}</div>
+            </div>
+            <button class="fav-btn" style="background:none; border:none; font-size:18px; cursor:pointer; padding:8px;">
+                ${isFav ? '❤️' : '🤍'}
+            </button>
+            <button class="add-btn" style="background:#282828; color:#fff; border:none; padding:6px 12px; border-radius:20px; cursor:pointer; font-size:12px;">+ 加清單</button>
+        `;
+
+        // 綁定事件
+        div.querySelector('.fav-btn').onclick = (e) => {
+            e.stopPropagation();
+            toggleFavorite(songData);
+            e.target.innerText = favorites.some(s => s.id === songData.id) ? '❤️' : '🤍';
+        };
+
+        div.querySelector('.add-btn').onclick = (e) => {
+            e.stopPropagation();
+            addToQueue(songData);
+        };
+
+        div.onclick = () => playSingleSong(songData);
+
+        resultsContainer.appendChild(div);
     });
 }
 
@@ -93,13 +115,19 @@ function renderFavorites() {
         const div = document.createElement('div');
         div.className = 'song-item';
         div.innerHTML = `
-            <img src="${song.cover}">
-            <div style="flex:1;">
-                <div class="title">${song.title}</div>
-                <div class="uploader">${song.artist}</div>
+            <img src="${song.cover}" onerror="this.src='https://via.placeholder.com/48'">
+            <div style="flex:1; overflow:hidden;">
+                <div class="title" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${song.title}</div>
+                <div class="uploader" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${song.artist}</div>
             </div>
-            <button onclick="event.stopPropagation(); toggleFavorite(${JSON.stringify(song).replace(/"/g, '&quot;')})" style="background:none; border:none; font-size:18px; cursor:pointer; margin-right:8px;">❤️</button>
+            <button class="fav-btn" style="background:none; border:none; font-size:18px; cursor:pointer; padding:8px;">❤️</button>
         `;
+
+        div.querySelector('.fav-btn').onclick = (e) => {
+            e.stopPropagation();
+            toggleFavorite(song);
+        };
+
         div.onclick = () => playSingleSong(song);
         favContainer.appendChild(div);
     });
@@ -139,7 +167,7 @@ async function loadAndPlayCurrent() {
 
     const stream = await fetchAudioStream(currentSong.id);
     if (!stream) {
-        alert("無法播放此歌曲，自動跳下一首");
+        alert("無法讀取此音訊直鏈，自動跳下一首");
         playNext();
         return;
     }
@@ -223,10 +251,10 @@ function renderQueue() {
             div.style.borderLeft = '4px solid #1DB954';
         }
         div.innerHTML = `
-            <img src="${song.cover}">
-            <div>
-                <div class="title" style="${idx === currentIndex ? 'color:#1DB954;' : ''}">${song.title}</div>
-                <div class="uploader">${song.artist}</div>
+            <img src="${song.cover}" onerror="this.src='https://via.placeholder.com/48'">
+            <div style="flex:1; overflow:hidden;">
+                <div class="title" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; ${idx === currentIndex ? 'color:#1DB954;' : ''}">${song.title}</div>
+                <div class="uploader" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${song.artist}</div>
             </div>
         `;
         div.onclick = () => {
