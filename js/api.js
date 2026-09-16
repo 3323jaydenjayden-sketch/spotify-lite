@@ -1,55 +1,73 @@
-// 備用 API 伺服器清單
-const PIPED_INSTANCES = [
-    "https://pipedapi.kavin.rocks",
-    "https://api.piped.privacydev.net",
-    "https://pipedapi.tokhmi.xyz",
-    "https://pipedapi.drgns.space"
+// 使用 Invidious API 備用節點清單（比 Piped 更穩定且無 CORS 限制）
+const API_INSTANCES = [
+    "https://inv.nerdvpn.de",
+    "https://invidious.nerdvpn.de",
+    "https://vid.puppethead.tw",
+    "https://invidious.flokinet.to",
+    "https://invidious.privacydev.net"
 ];
 
 let currentInstanceIndex = 0;
 
 function getApiUrl() {
-    return PIPED_INSTANCES[currentInstanceIndex];
+    return API_INSTANCES[currentInstanceIndex];
 }
 
-// 搜尋 YouTube 音樂歌曲（支援自動切換失效節點）
+// 搜尋 YouTube 音樂歌曲
 async function fetchSearchResults(query) {
-    for (let i = 0; i < PIPED_INSTANCES.length; i++) {
+    for (let i = 0; i < API_INSTANCES.length; i++) {
         try {
             const baseUrl = getApiUrl();
-            const res = await fetch(`${baseUrl}/search?q=${encodeURIComponent(query)}&filter=music_songs`);
+            const res = await fetch(`${baseUrl}/api/v1/search?q=${encodeURIComponent(query)}&type=video`);
             if (!res.ok) throw new Error("HTTP Status " + res.status);
+            
             const data = await res.json();
-            if (data && data.items) return data.items;
+            if (data && Array.isArray(data)) {
+                // 轉換為統一格式
+                return data.map(item => ({
+                    type: 'stream',
+                    title: item.title,
+                    uploaderName: item.author,
+                    thumbnail: item.videoThumbnails ? (item.videoThumbnails.find(t => t.quality === 'medium')?.url || item.videoThumbnails[0]?.url) : `https://i.ytimg.com/vi/${item.videoId}/hqdefault.jpg`,
+                    url: `/watch?v=${item.videoId}`
+                }));
+            }
         } catch (err) {
             console.warn(`API 節點 ${getApiUrl()} 失敗，嘗試下一個...`, err);
-            currentInstanceIndex = (currentInstanceIndex + 1) % PIPED_INSTANCES.length;
+            currentInstanceIndex = (currentInstanceIndex + 1) % API_INSTANCES.length;
         }
     }
-    alert("目前所有 API 伺服器連線繁忙，請稍後再試！");
+    alert("目前搜尋伺服器連線繁忙，請稍後再試！");
     return [];
 }
 
-// 取得無廣告純音訊直鏈
+// 取得音訊串流直鏈
 async function fetchAudioStream(videoId) {
-    for (let i = 0; i < PIPED_INSTANCES.length; i++) {
+    for (let i = 0; i < API_INSTANCES.length; i++) {
         try {
             const baseUrl = getApiUrl();
-            const res = await fetch(`${baseUrl}/streams/${videoId}`);
+            const res = await fetch(`${baseUrl}/api/v1/videos/${videoId}`);
             if (!res.ok) throw new Error("HTTP Status " + res.status);
+            
             const data = await res.json();
             
-            const audioStream = data.audioStreams.find(s => s.mimeType.includes('audio/mp4')) || data.audioStreams[0];
-            
-            return {
-                title: data.title,
-                artist: data.uploader,
-                cover: data.thumbnailUrl,
-                url: audioStream.url
-            };
+            // 尋找音訊軌
+            const adaptiveFormats = data.adaptiveFormats || [];
+            const audioStream = adaptiveFormats.find(s => s.type && s.type.includes('audio/mp4')) || 
+                                adaptiveFormats.find(s => s.type && s.type.includes('audio')) ||
+                                data.formatStreams[0];
+
+            if (audioStream && audioStream.url) {
+                return {
+                    title: data.title,
+                    artist: data.author,
+                    cover: data.videoThumbnails ? data.videoThumbnails[0].url : `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+                    url: audioStream.url
+                };
+            }
         } catch (err) {
             console.warn(`解析音訊失敗 (${getApiUrl()})，嘗試下一個...`, err);
-            currentInstanceIndex = (currentInstanceIndex + 1) % PIPED_INSTANCES.length;
+            currentInstanceIndex = (currentInstanceIndex + 1) % API_INSTANCES.length;
         }
     }
     return null;
