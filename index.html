@@ -6,36 +6,110 @@
     <title>Spotify Lite</title>
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 16px;
+            padding-bottom: 100px;
+        }
+        .search-box {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        .search-input {
+            flex: 1;
+            padding: 12px 16px;
+            border-radius: 20px;
+            border: none;
+            outline: none;
+            background: #242424;
+            color: #fff;
+            font-size: 14px;
+        }
+        .search-btn {
+            padding: 12px 20px;
+            border-radius: 20px;
+            border: none;
+            background: #1DB954;
+            color: #fff;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        h3 {
+            margin-top: 16px;
+            margin-bottom: 12px;
+            font-size: 18px;
+        }
+        .player-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #181818;
+            padding: 12px 16px;
+            border-top: 1px solid #282828;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 999;
+        }
+        .play-btn {
+            background: #1DB954;
+            border: none;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            color: #fff;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
 </head>
-<body style="background-color:#121212; color:#fff; font-family:sans-serif; margin:0; padding:16px;">
+<body>
 
-    <div style="display:flex; gap:8px; margin-bottom:16px;">
-        <input type="text" id="searchInput" placeholder="輸入歌名..." style="flex:1; padding:10px; border-radius:20px; border:none; outline:none; background:#242424; color:#fff;">
-        <button id="searchBtn" style="padding:10px 16px; border-radius:20px; border:none; background:#1DB954; color:#fff; font-weight:bold; cursor:pointer;">搜尋</button>
+    <!-- 搜尋列 -->
+    <div class="search-box">
+        <input type="text" id="searchInput" class="search-input" placeholder="搜尋歌曲或歌手 (例如: Sugar)...">
+        <button id="searchBtn" class="search-btn">搜尋</button>
     </div>
 
+    <!-- 我的最愛區塊 -->
     <h3>❤️ 我的最愛</h3>
-    <div id="favorites-list" style="margin-bottom:20px;"></div>
+    <div id="favorites-list"></div>
 
+    <!-- 搜尋結果區塊 -->
     <h3>🔍 搜尋結果</h3>
-    <div id="results" style="margin-bottom:20px; min-height:50px;"></div>
+    <div id="results" style="min-height: 60px;"></div>
 
+    <!-- 待播清單區塊 -->
     <h3>📜 待播清單</h3>
-    <div id="queue-list" style="margin-bottom:80px;"></div>
+    <div id="queue-list"></div>
 
-    <!-- 底部播放器 -->
-    <div style="position:fixed; bottom:0; left:0; right:0; background:#181818; padding:12px; border-top:1px solid #282828; display:flex; align-items:center; gap:12px;">
-        <img id="cover" src="https://via.placeholder.com/48" style="width:48px; height:48px; border-radius:4px; object-fit:cover;">
-        <div style="flex:1; overflow:hidden;">
-            <div id="track-title" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:bold;">未播放歌曲</div>
-            <div id="track-artist" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#b3b3b3; font-size:12px;">--</div>
+    <!-- 底部播放器列 -->
+    <div class="player-bar">
+        <img id="cover" src="https://via.placeholder.com/48" style="width: 48px; height: 48px; border-radius: 4px; object-fit: cover;">
+        <div style="flex: 1; overflow: hidden;">
+            <div id="track-title" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: bold; font-size: 14px;">未播放歌曲</div>
+            <div id="track-artist" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #b3b3b3; font-size: 12px; margin-top: 2px;">--</div>
         </div>
-        <button id="play-btn" onclick="togglePlay()" style="background:#1DB954; border:none; width:40px; height:40px; border-radius:50%; color:#fff; font-size:18px; cursor:pointer;">▶</button>
+        <button id="play-btn" class="play-btn" onclick="togglePlay()">▶</button>
     </div>
 
     <audio id="audio-element"></audio>
 
-    <script src="js/api.js"></script>
-    <script src="js/app.js"></script>
+    <!-- 帶有版本號的腳本，防止 PWA 快取舊舊檔案 -->
+    <script src="js/api.js?v=300"></script>
+    <script src="js/app.js?v=300"></script>
 </body>
 </html>
