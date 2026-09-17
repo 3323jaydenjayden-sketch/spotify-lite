@@ -1,109 +1,89 @@
-// 多組備用 API 伺服器
-const API_INSTANCES = [
-    "https://pipedapi.kavin.rocks",
+// 使用支援跨網域 (CORS) 且穩定的公用 API 節點
+const API_NODES = [
     "https://api.piped.privacydev.net",
     "https://pipedapi.tokhmi.xyz",
-    "https://inv.nerdvpn.de",
-    "https://invidious.flokinet.to"
+    "https://invidious.nerdvpn.de",
+    "https://vid.puppethead.tw"
 ];
 
-let currentInstanceIndex = 0;
+let nodeIndex = 0;
 
-function getApiUrl() {
-    return API_INSTANCES[currentInstanceIndex];
-}
-
-// 搜尋歌曲（自動適應 Piped 與 Invidious 兩種不同格式）
+// 搜尋歌曲
 async function fetchSearchResults(query) {
     if (!query || !query.trim()) return [];
 
-    for (let i = 0; i < API_INSTANCES.length; i++) {
+    for (let i = 0; i < API_NODES.length; i++) {
+        const baseUrl = API_NODES[nodeIndex];
         try {
-            const baseUrl = getApiUrl();
             const isPiped = baseUrl.includes("piped");
-            
-            const searchEndpoint = isPiped 
+            const url = isPiped 
                 ? `${baseUrl}/search?q=${encodeURIComponent(query)}&filter=music_songs`
                 : `${baseUrl}/api/v1/search?q=${encodeURIComponent(query)}&type=video`;
 
-            const res = await fetch(searchEndpoint);
-            if (!res.ok) throw new Error("HTTP " + res.status);
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
             
             const data = await res.json();
-            const items = isPiped ? data.items : data;
+            const rawItems = isPiped ? data.items : data;
 
-            if (items && Array.isArray(items) && items.length > 0) {
-                // 統一格式化回傳，確保 app.js 抓得到資料
-                return items.map(item => {
-                    const videoId = isPiped 
-                        ? (item.url ? item.url.replace("/watch?v=", "") : "")
+            if (Array.isArray(rawItems) && rawItems.length > 0) {
+                return rawItems.map(item => {
+                    const id = isPiped 
+                        ? (item.url ? item.url.replace('/watch?v=', '') : '')
                         : item.videoId;
-
                     return {
-                        videoId: videoId,
-                        url: `/watch?v=${videoId}`,
-                        title: item.title || "未知歌名",
+                        videoId: id,
+                        title: item.title || "未知歌曲",
                         uploaderName: isPiped ? (item.uploaderName || item.uploader) : item.author,
                         thumbnail: isPiped 
                             ? item.thumbnail 
-                            : (item.videoThumbnails ? (item.videoThumbnails.find(t => t.quality === 'medium')?.url || item.videoThumbnails[0]?.url) : `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`)
+                            : `https://i.ytimg.com/vi/${id}/hqdefault.jpg`
                     };
-                }).filter(item => item.videoId); // 過濾無效 ID
+                }).filter(x => x.videoId);
             }
         } catch (err) {
-            console.warn(`節點 ${getApiUrl()} 讀取失敗，自動切換下一個...`, err);
-            currentInstanceIndex = (currentInstanceIndex + 1) % API_INSTANCES.length;
+            console.warn(`節點 ${baseUrl} 失敗，自動切換...`);
+            nodeIndex = (nodeIndex + 1) % API_NODES.length;
         }
     }
-    
-    alert("目前連線較忙碌，請再試一次或稍後再搜尋！");
     return [];
 }
 
-// 取得音訊串流直鏈
+// 解析播放音訊
 async function fetchAudioStream(videoId) {
-    if (!videoId) return null;
-
-    for (let i = 0; i < API_INSTANCES.length; i++) {
+    for (let i = 0; i < API_NODES.length; i++) {
+        const baseUrl = API_NODES[nodeIndex];
         try {
-            const baseUrl = getApiUrl();
             const isPiped = baseUrl.includes("piped");
-            
-            const endpoint = isPiped 
+            const url = isPiped 
                 ? `${baseUrl}/streams/${videoId}`
                 : `${baseUrl}/api/v1/videos/${videoId}`;
 
-            const res = await fetch(endpoint);
-            if (!res.ok) throw new Error("HTTP " + res.status);
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
             
             const data = await res.json();
 
-            if (isPiped && data.audioStreams && data.audioStreams.length > 0) {
+            if (isPiped && data.audioStreams?.length) {
                 const audio = data.audioStreams.find(s => s.mimeType.includes('audio/mp4')) || data.audioStreams[0];
                 return {
                     title: data.title,
-                    artist: data.uploader || "未知歌手",
+                    artist: data.uploader,
                     cover: data.thumbnailUrl,
                     url: audio.url
                 };
-            } else if (!isPiped && data.adaptiveFormats) {
-                const audio = data.adaptiveFormats.find(s => s.type && s.type.includes('audio/mp4')) || 
-                              data.adaptiveFormats.find(s => s.type && s.type.includes('audio')) ||
-                              data.formatStreams[0];
-                if (audio && audio.url) {
-                    return {
-                        title: data.title,
-                        artist: data.author || "未知歌手",
-                        cover: data.videoThumbnails ? data.videoThumbnails[0].url : `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-                        url: audio.url
-                    };
-                }
+            } else if (!isPiped && data.adaptiveFormats?.length) {
+                const audio = data.adaptiveFormats.find(s => s.type?.includes('audio')) || data.formatStreams[0];
+                return {
+                    title: data.title,
+                    artist: data.author,
+                    cover: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+                    url: audio.url
+                };
             }
         } catch (err) {
-            console.warn(`解析音訊失敗 (${getApiUrl()})，試下一個...`, err);
-            currentInstanceIndex = (currentInstanceIndex + 1) % API_INSTANCES.length;
+            nodeIndex = (nodeIndex + 1) % API_NODES.length;
         }
     }
     return null;
 }
-
