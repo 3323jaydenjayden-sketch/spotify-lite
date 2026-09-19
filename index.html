@@ -3,123 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spotify Lite - 網頁順暢播放版</title>
+    <title>網頁高音質音樂播放器</title>
     <style>
-        * { box-sizing: border-box; }
-        body { background: #121212; color: #fff; font-family: system-ui, sans-serif; margin: 0; padding: 16px; padding-bottom: 140px; }
-        
-        .search-bar { display: flex; gap: 8px; margin-bottom: 20px; }
-        input { flex: 1; padding: 12px; border-radius: 20px; border: none; background: #242424; color: #fff; outline: none; font-size: 14px; }
-        button.src-btn { padding: 12px 20px; border-radius: 20px; border: none; background: #1DB954; color: #fff; font-weight: bold; cursor: pointer; }
-        
-        .card { display: flex; align-items: center; gap: 12px; background: #282828; padding: 10px; margin-bottom: 8px; border-radius: 8px; cursor: pointer; }
-        .card:hover { background: #383838; }
-        
-        .player-panel { 
-            position: fixed; bottom: 0; left: 0; right: 0; 
-            background: #181818; border-top: 1px solid #282828; 
-            padding: 12px; z-index: 999;
-            display: flex; flex-direction: column; gap: 8px;
-        }
-        .player-info { display: flex; align-items: center; gap: 12px; }
-        
-        #yt-frame {
-            width: 100%;
-            height: 80px;
-            border: none;
-            border-radius: 8px;
-            display: none;
-            background: #000;
-        }
+        body { background: #121212; color: #fff; font-family: sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; }
+        .search-box { display: flex; gap: 10px; margin-bottom: 20px; }
+        input { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #333; background: #222; color: #fff; }
+        button { padding: 12px 20px; border-radius: 8px; border: none; background: #1db954; color: #fff; font-weight: bold; cursor: pointer; }
+        .song-item { display: flex; align-items: center; justify-content: space-between; background: #222; padding: 12px; border-radius: 8px; margin-bottom: 10px; }
+        .player { position: fixed; bottom: 0; left: 0; right: 0; background: #181818; padding: 15px; border-top: 1px solid #333; text-align: center; }
+        audio { width: 100%; max-width: 500px; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-    <div class="search-bar">
-        <input type="text" id="searchInput" placeholder="搜尋歌名 / 歌手 (例如: 告白氣球, 周杰倫)...">
-        <button class="src-btn" onclick="runSearch()">搜尋</button>
+    <h2>🎵 網頁順暢音樂播放器</h2>
+    <div class="search-box">
+        <input type="text" id="keyword" placeholder="輸入歌名，例如：告白氣球">
+        <button onclick="searchMusic()">搜尋</button>
     </div>
 
-    <h3>🔍 海量音樂搜尋庫</h3>
+    <div id="status"></div>
     <div id="results"></div>
 
-    <div class="player-panel">
-        <div class="player-info">
-            <img id="cover" src="https://via.placeholder.com/48" style="width: 48px; height: 48px; border-radius: 4px; object-fit: cover;">
-            <div style="flex: 1; overflow: hidden;">
-                <div id="track-title" style="font-weight: bold; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">未播放歌曲</div>
-                <div id="track-artist" style="color: #b3b3b3; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">點擊歌曲立即在網頁內播放</div>
-            </div>
-        </div>
-        
-        <!-- 內嵌播放視窗 -->
-        <iframe id="yt-frame" allow="autoplay; encrypted-media"></iframe>
+    <div class="player">
+        <div id="now-playing" style="font-weight: bold;">尚未選擇歌曲</div>
+        <audio id="audio-player" controls autoplay></audio>
     </div>
 
     <script>
-        document.getElementById('searchInput').addEventListener('keyup', (e) => {
-            if (e.key === 'Enter') runSearch();
-        });
+        // 使用幾組公共 Invidious 實例備用
+        const INVIDIOUS_INSTANCES = [
+            'https://invidious.nerdvpn.de',
+            'https://inv.tux.pizza',
+            'https://invidious.drgns.space'
+        ];
 
-        async function runSearch() {
-            const query = document.getElementById('searchInput').value.trim();
-            const resultsContainer = document.getElementById('results');
+        async function searchMusic() {
+            const query = document.getElementById('keyword').value.trim();
+            if (!query) return;
 
-            if (!query) return alert("請輸入關鍵字！");
+            const status = document.getElementById('status');
+            const results = document.getElementById('results');
+            status.innerText = '🔍 搜尋歌曲中...';
+            results.innerHTML = '';
 
-            resultsContainer.innerHTML = '<p style="color:#1DB954;">⏳ 搜尋音樂庫中...</p>';
-
-            try {
-                let url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=15`;
-                let res = await fetch(url);
-                let data = await res.json();
-
-                resultsContainer.innerHTML = '';
-
-                if (!data.results || data.results.length === 0) {
-                    resultsContainer.innerHTML = '<p style="color:#888;">❌ 查無結果，請嘗試換個關鍵字搜尋。</p>';
-                    return;
+            let data = null;
+            // 嘗試連線到可用的 Invidious 伺服器
+            for (let instance of INVIDIOUS_INSTANCES) {
+                try {
+                    let res = await fetch(`${instance}/api/v1/search?q=${encodeURIComponent(query)}&type=video`);
+                    if (res.ok) {
+                        data = await res.json();
+                        window.currentInstance = instance; // 紀錄成功的伺服器
+                        break;
+                    }
+                } catch (e) {
+                    continue;
                 }
-
-                data.results.forEach(item => {
-                    const song = {
-                        title: item.trackName || "未知歌名",
-                        artist: item.artistName || "未知歌手",
-                        cover: item.artworkUrl100 ? item.artworkUrl100.replace('100x100bb', '300x300bb') : 'https://via.placeholder.com/300',
-                        // 關鍵處：搜尋時強制避開 MV，改搜歌詞版/音訊版，保證內嵌許可
-                        embedQuery: `${item.artistName} ${item.trackName} lyrics audio`
-                    };
-
-                    const div = document.createElement('div');
-                    div.className = 'card';
-                    div.innerHTML = `
-                        <img src="${song.cover}" style="width:48px; height:48px; border-radius:4px;" onerror="this.src='https://via.placeholder.com/48'">
-                        <div style="flex:1; overflow:hidden;">
-                            <div style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${song.title}</div>
-                            <div style="color:#b3b3b3; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${song.artist}</div>
-                        </div>
-                        <button style="background:#1DB954; color:#fff; border:none; padding:8px 14px; border-radius:16px; font-weight:bold; cursor:pointer;">▶ 網頁內播放</button>
-                    `;
-                    div.onclick = () => playSong(song);
-                    resultsContainer.appendChild(div);
-                });
-            } catch (err) {
-                resultsContainer.innerHTML = '<p style="color:red;">搜尋連線錯誤，請重試。</p>';
             }
+
+            if (!data || data.length === 0) {
+                status.innerText = '❌ 搜尋失敗或找不到歌曲，請重試。';
+                return;
+            }
+
+            status.innerText = '';
+            data.slice(0, 10).forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'song-item';
+                div.innerHTML = `
+                    <div>
+                        <strong>${item.title}</strong><br>
+                        <small style="color: #aaa;">${item.author}</small>
+                    </div>
+                    <button onclick="playVideo('${item.videoId}', '${escapeQuotes(item.title)}')">▶ 播放</button>
+                `;
+                results.appendChild(div);
+            });
         }
 
-        function playSong(song) {
-            document.getElementById('track-title').innerText = song.title;
-            document.getElementById('track-artist').innerText = song.artist;
-            document.getElementById('cover').src = song.cover;
+        function escapeQuotes(str) {
+            return str.replace(/'/g, "\\'").replace(/"/g, '\\"');
+        }
 
-            const frame = document.getElementById('yt-frame');
-            
-            // 加上 origin 參數防止網域協議問題
-            const embedUrl = `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(song.embedQuery)}&autoplay=1`;
-            
-            frame.src = embedUrl;
-            frame.style.display = 'block';
+        async function playVideo(videoId, title) {
+            const status = document.getElementById('status');
+            const nowPlaying = document.getElementById('now-playing');
+            const audioPlayer = document.getElementById('audio-player');
+
+            nowPlaying.innerText = `⏳ 正在解析音軌：${title}`;
+
+            try {
+                // 取得影片的詳細音軌資料
+                let res = await fetch(`${window.currentInstance}/api/v1/videos/${videoId}`);
+                let details = await res.json();
+
+                // 篩選出純音訊串流 (Audio Only)
+                let audioStreams = details.adaptiveFormats.filter(f => f.type && f.type.startsWith('audio/'));
+                
+                if (audioStreams.length > 0) {
+                    // 優先選擇品質較好的音軌
+                    let bestAudio = audioStreams[0].url;
+                    audioPlayer.src = bestAudio;
+                    nowPlaying.innerText = `▶ 正在播放：${title}`;
+                    audioPlayer.play();
+                } else {
+                    alert('無法提取該歌曲的音軌');
+                }
+            } catch (err) {
+                alert('解析音軌時出錯，請嘗試點擊其他搜尋結果');
+            }
         }
     </script>
 </body>
