@@ -3,117 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>網頁高音質音樂播放器</title>
-    <style>
-        body { background: #121212; color: #fff; font-family: sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; }
-        .search-box { display: flex; gap: 10px; margin-bottom: 20px; }
-        input { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #333; background: #222; color: #fff; }
-        button { padding: 12px 20px; border-radius: 8px; border: none; background: #1db954; color: #fff; font-weight: bold; cursor: pointer; }
-        .song-item { display: flex; align-items: center; justify-content: space-between; background: #222; padding: 12px; border-radius: 8px; margin-bottom: 10px; }
-        .player { position: fixed; bottom: 0; left: 0; right: 0; background: #181818; padding: 15px; border-top: 1px solid #333; text-align: center; }
-        audio { width: 100%; max-width: 500px; margin-top: 10px; }
-    </style>
+    <title>Spotify Lite</title>
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-    <h2>🎵 網頁順暢音樂播放器</h2>
-    <div class="search-box">
-        <input type="text" id="keyword" placeholder="輸入歌名，例如：告白氣球">
-        <button onclick="searchMusic()">搜尋</button>
+    <div class="header">
+        <h1>🎵 Spotify Lite</h1>
     </div>
 
-    <div id="status"></div>
+    <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="搜尋歌曲或歌手 (例如: 告白氣球, 周杰倫)...">
+        <button class="src-btn" id="searchBtn">搜尋</button>
+    </div>
+
+    <div class="section-title">搜尋結果</div>
     <div id="results"></div>
 
-    <div class="player">
-        <div id="now-playing" style="font-weight: bold;">尚未選擇歌曲</div>
-        <audio id="audio-player" controls autoplay></audio>
+    <!-- 底部音樂播放面板 -->
+    <div class="player-panel">
+        <div class="player-header">
+            <img id="cover" src="https://via.placeholder.com/48?text=Music" alt="封面">
+            <div style="flex: 1; overflow: hidden;">
+                <div id="track-title" class="player-title">尚未選擇歌曲</div>
+                <div id="track-artist" class="player-artist">點擊列表歌曲即可開始播放</div>
+            </div>
+        </div>
+        
+        <!-- 防封鎖 YouTube Iframe 容器 -->
+        <iframe 
+            id="yt-frame" 
+            allow="autoplay; encrypted-media" 
+            allowfullscreen>
+        </iframe>
     </div>
 
-    <script>
-        // 使用幾組公共 Invidious 實例備用
-        const INVIDIOUS_INSTANCES = [
-            'https://invidious.nerdvpn.de',
-            'https://inv.tux.pizza',
-            'https://invidious.drgns.space'
-        ];
-
-        async function searchMusic() {
-            const query = document.getElementById('keyword').value.trim();
-            if (!query) return;
-
-            const status = document.getElementById('status');
-            const results = document.getElementById('results');
-            status.innerText = '🔍 搜尋歌曲中...';
-            results.innerHTML = '';
-
-            let data = null;
-            // 嘗試連線到可用的 Invidious 伺服器
-            for (let instance of INVIDIOUS_INSTANCES) {
-                try {
-                    let res = await fetch(`${instance}/api/v1/search?q=${encodeURIComponent(query)}&type=video`);
-                    if (res.ok) {
-                        data = await res.json();
-                        window.currentInstance = instance; // 紀錄成功的伺服器
-                        break;
-                    }
-                } catch (e) {
-                    continue;
-                }
-            }
-
-            if (!data || data.length === 0) {
-                status.innerText = '❌ 搜尋失敗或找不到歌曲，請重試。';
-                return;
-            }
-
-            status.innerText = '';
-            data.slice(0, 10).forEach(item => {
-                const div = document.createElement('div');
-                div.className = 'song-item';
-                div.innerHTML = `
-                    <div>
-                        <strong>${item.title}</strong><br>
-                        <small style="color: #aaa;">${item.author}</small>
-                    </div>
-                    <button onclick="playVideo('${item.videoId}', '${escapeQuotes(item.title)}')">▶ 播放</button>
-                `;
-                results.appendChild(div);
-            });
-        }
-
-        function escapeQuotes(str) {
-            return str.replace(/'/g, "\\'").replace(/"/g, '\\"');
-        }
-
-        async function playVideo(videoId, title) {
-            const status = document.getElementById('status');
-            const nowPlaying = document.getElementById('now-playing');
-            const audioPlayer = document.getElementById('audio-player');
-
-            nowPlaying.innerText = `⏳ 正在解析音軌：${title}`;
-
-            try {
-                // 取得影片的詳細音軌資料
-                let res = await fetch(`${window.currentInstance}/api/v1/videos/${videoId}`);
-                let details = await res.json();
-
-                // 篩選出純音訊串流 (Audio Only)
-                let audioStreams = details.adaptiveFormats.filter(f => f.type && f.type.startsWith('audio/'));
-                
-                if (audioStreams.length > 0) {
-                    // 優先選擇品質較好的音軌
-                    let bestAudio = audioStreams[0].url;
-                    audioPlayer.src = bestAudio;
-                    nowPlaying.innerText = `▶ 正在播放：${title}`;
-                    audioPlayer.play();
-                } else {
-                    alert('無法提取該歌曲的音軌');
-                }
-            } catch (err) {
-                alert('解析音軌時出錯，請嘗試點擊其他搜尋結果');
-            }
-        }
-    </script>
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
 </body>
 </html>
