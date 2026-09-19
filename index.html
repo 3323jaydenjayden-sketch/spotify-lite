@@ -3,157 +3,155 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spotify Lite - 本地音樂播放器</title>
+    <title>Spotify Lite - YouTube 海量音樂庫</title>
     <style>
         * { box-sizing: border-box; }
-        body { background: #121212; color: #fff; font-family: sans-serif; margin: 0; padding: 16px; padding-bottom: 90px; }
+        body { background: #121212; color: #fff; font-family: sans-serif; margin: 0; padding: 16px; padding-bottom: 120px; }
         
-        .upload-zone {
-            border: 2px dashed #1DB954;
-            border-radius: 12px;
-            padding: 24px;
-            text-align: center;
-            background: #181818;
-            margin-bottom: 20px;
-            cursor: pointer;
-        }
-        .upload-zone:hover { background: #242424; }
+        .search-bar { display: flex; gap: 8px; margin-bottom: 20px; }
+        input { flex: 1; padding: 12px; border-radius: 20px; border: none; background: #242424; color: #fff; outline: none; font-size: 14px; }
+        button.src-btn { padding: 12px 20px; border-radius: 20px; border: none; background: #1DB954; color: #fff; font-weight: bold; cursor: pointer; }
         
         .card { display: flex; align-items: center; gap: 12px; background: #282828; padding: 10px; margin-bottom: 8px; border-radius: 8px; cursor: pointer; }
         .card:hover { background: #383838; }
         
-        .player { 
+        /* 底部固定音樂面板 */
+        .player-panel { 
             position: fixed; bottom: 0; left: 0; right: 0; 
-            background: #181818; padding: 12px; border-top: 1px solid #282828; 
-            display: flex; align-items: center; gap: 12px; z-index: 999; 
+            background: #181818; border-top: 1px solid #282828; 
+            padding: 12px; z-index: 999;
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+        }
+        .player-info { display: flex; align-items: center; gap: 12px; width: 100%; }
+        
+        /* 隱藏/極小化 YouTube 官方播放器視窗 (只留下聲音與控制) */
+        #yt-player-container {
+            width: 100%;
+            height: 60px;
+            border-radius: 8px;
+            overflow: hidden;
+            display: none; /* 有播放時才顯示小視窗 */
         }
     </style>
 </head>
 <body>
 
-    <!-- 檔案選取區 -->
-    <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
-        <p style="margin: 0; font-size: 16px; font-weight: bold; color: #1DB954;">📁 點擊選取你手機/電腦裡的 MP3 音樂</p>
-        <p style="margin: 8px 0 0 0; color: #b3b3b3; font-size: 12px;">(支援多選 MP3 / M4A / WAV 檔案)</p>
-    </div>
-    <input type="file" id="fileInput" accept="audio/*" multiple style="display: none;" onchange="handleFiles(this.files)">
-
-    <h3>🎵 播放清單</h3>
-    <div id="playlist">
-        <p style="color: #888; font-size: 14px;">目前清單是空的，請先點擊上方選取歌曲檔案。</p>
+    <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="搜尋任意歌名 / 歌手 (例如: 告白氣球, 周杰倫, Taylor Swift)...">
+        <button class="src-btn" onclick="runSearch()">搜尋</button>
     </div>
 
-    <!-- 底部播放列 -->
-    <div class="player">
-        <div style="width: 48px; height: 48px; background: #333; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 20px;">🎵</div>
-        <div style="flex: 1; overflow: hidden;">
-            <div id="track-title" style="font-weight: bold; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">未播放歌曲</div>
-            <div id="track-artist" style="color: #b3b3b3; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">請選擇音樂檔案</div>
+    <h3>🔍 搜尋結果 (海量音樂庫)</h3>
+    <div id="results"></div>
+
+    <!-- 底部播放介面 -->
+    <div class="player-panel">
+        <div class="player-info">
+            <img id="cover" src="https://via.placeholder.com/48" style="width: 48px; height: 48px; border-radius: 4px; object-fit: cover;">
+            <div style="flex: 1; overflow: hidden;">
+                <div id="track-title" style="font-weight: bold; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">未播放歌曲</div>
+                <div id="track-artist" style="color: #b3b3b3; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">點擊上方歌曲開始播放</div>
+            </div>
+            <button id="play-btn" onclick="togglePlay()" style="background: #1DB954; color: #fff; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 16px; cursor: pointer;">▶</button>
         </div>
-        <button id="play-btn" onclick="togglePlay()" style="background: #1DB954; color: #fff; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 16px; cursor: pointer;">▶</button>
+        
+        <!-- 官方 YouTube IFrame 載入區 -->
+        <div id="yt-player-container">
+            <div id="yt-player"></div>
+        </div>
     </div>
 
-    <audio id="audio-player" playsinline></audio>
+    <!-- 載入 YouTube 官方 API SDK -->
+    <script src="https://www.youtube.com/iframe_api"></script>
 
     <script>
-        const audio = document.getElementById('audio-player');
-        const playBtn = document.getElementById('play-btn');
+        let player;
+        let isApiReady = false;
 
-        let playlist = [];
-        let currentIndex = -1;
+        // YouTube API 初始化完成時自動觸發
+        function onYouTubeIframeAPIReady() {
+            isApiReady = true;
+        }
 
-        audio.onplay = () => { playBtn.innerText = "⏸"; };
-        audio.onpause = () => { playBtn.innerText = "▶"; };
+        document.getElementById('searchInput').addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') runSearch();
+        });
 
-        function handleFiles(files) {
-            if (files.length === 0) return;
+        // 使用 iTunes API 搜尋高畫質專輯封面與精準歌名，再連結至 YouTube 庫
+        async function runSearch() {
+            const query = document.getElementById('searchInput').value.trim();
+            const resultsContainer = document.getElementById('results');
 
-            playlist = Array.from(files).map(file => {
-                // 從檔名解析歌名與歌手（例："Jay Chou - 告白氣球.mp3"）
-                let nameParts = file.name.replace(/\.[^/.]+$/, "").split(" - ");
-                let artist = nameParts.length > 1 ? nameParts[0] : "本地音訊";
-                let title = nameParts.length > 1 ? nameParts[1] : nameParts[0];
+            if (!query) return alert("請輸入關鍵字！");
 
-                return {
-                    title: title,
-                    artist: artist,
-                    url: URL.createObjectURL(file) // 建立本地瀏覽器可讀取的 Blob 網址
-                };
-            });
+            resultsContainer.innerHTML = '<p style="color:#1DB954;">⏳ 搜尋音樂庫中...</p>';
 
-            renderPlaylist();
-            if (playlist.length > 0) {
-                playSong(0); // 自動開始播放第一首
+            try {
+                let url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=15`;
+                let res = await fetch(url);
+                let data = await res.json();
+
+                resultsContainer.innerHTML = '';
+
+                if (!data.results || data.results.length === 0) {
+                    resultsContainer.innerHTML = '<p style="color:#888;">❌ 查無結果，請嘗試換個關鍵字搜尋。</p>';
+                    return;
+                }
+
+                data.results.forEach(item => {
+                    const song = {
+                        title: item.trackName || "未知歌名",
+                        artist: item.artistName || "未知歌手",
+                        cover: item.artworkUrl100 ? item.artworkUrl100.replace('100x100bb', '300x300bb') : 'https://via.placeholder.com/300',
+                        query: `${item.artistName} ${item.trackName}`
+                    };
+
+                    const div = document.createElement('div');
+                    div.className = 'card';
+                    div.innerHTML = `
+                        <img src="${song.cover}" style="width:48px; height:48px; border-radius:4px;" onerror="this.src='https://via.placeholder.com/48'">
+                        <div style="flex:1; overflow:hidden;">
+                            <div style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${song.title}</div>
+                            <div style="color:#b3b3b3; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${song.artist}</div>
+                        </div>
+                        <button style="background:#1DB954; color:#fff; border:none; padding:6px 12px; border-radius:12px; font-weight:bold;">播放完整版</button>
+                    `;
+                    div.onclick = () => playSong(song);
+                    resultsContainer.appendChild(div);
+                });
+            } catch (err) {
+                resultsContainer.innerHTML = '<p style="color:red;">搜尋連線錯誤，請重試。</p>';
             }
         }
 
-        function renderPlaylist() {
-            const container = document.getElementById('playlist');
-            container.innerHTML = '';
-
-            playlist.forEach((song, index) => {
-                const div = document.createElement('div');
-                div.className = 'card';
-                div.innerHTML = `
-                    <div style="width:40px; height:40px; background:#333; border-radius:4px; display:flex; align-items:center; justify-content:center;">🎵</div>
-                    <div style="flex:1; overflow:hidden;">
-                        <div style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${song.title}</div>
-                        <div style="color:#b3b3b3; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${song.artist}</div>
-                    </div>
-                    <button style="background:#1DB954; color:#fff; border:none; padding:6px 12px; border-radius:12px; font-weight:bold;">播放</button>
-                `;
-                div.onclick = () => playSong(index);
-                container.appendChild(div);
-            });
-        }
-
-        function playSong(index) {
-            if (index < 0 || index >= playlist.length) return;
-
-            currentIndex = index;
-            const song = playlist[currentIndex];
-
+        function playSong(song) {
             document.getElementById('track-title').innerText = song.title;
             document.getElementById('track-artist').innerText = song.artist;
+            document.getElementById('cover').src = song.cover;
+            
+            const playerBox = document.getElementById('yt-player-container');
+            playerBox.style.display = 'block';
 
-            audio.src = song.url;
-            setupMediaSession(song);
-
-            audio.play().then(() => {
-                playBtn.innerText = "⏸";
-            }).catch(e => console.log("等待點擊播放", e));
-        }
-
-        function setupMediaSession(song) {
-            if ('mediaSession' in navigator) {
-                navigator.mediaSession.metadata = new MediaMetadata({
-                    title: song.title,
-                    artist: song.artist,
-                    album: 'Spotify Lite (本地播放)'
-                });
-
-                navigator.mediaSession.setActionHandler('play', () => audio.play());
-                navigator.mediaSession.setActionHandler('pause', () => audio.pause());
-                navigator.mediaSession.setActionHandler('previoustrack', () => playSong(currentIndex - 1));
-                navigator.mediaSession.setActionHandler('nexttrack', () => playSong(currentIndex + 1));
-            }
+            // 使用 YouTube 官方內嵌語法搜尋並播放完整音軌
+            const embedUrl = `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(song.query)}&autoplay=1&playsinline=1`;
+            
+            playerBox.innerHTML = `<iframe id="yt-iframe" width="100%" height="60" src="${embedUrl}" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+            
+            document.getElementById('play-btn').innerText = "⏸";
         }
 
         function togglePlay() {
-            if (!audio.src) return;
-            if (audio.paused) {
-                audio.play();
+            const iframe = document.getElementById('yt-iframe');
+            if (!iframe) return;
+            
+            const btn = document.getElementById('play-btn');
+            if (btn.innerText === "⏸") {
+                btn.innerText = "▶";
+                // 暫停時可將 src 清空或重新載入
             } else {
-                audio.pause();
+                btn.innerText = "⏸";
             }
         }
-
-        // 播放完畢自動跳下一首
-        audio.onended = () => {
-            if (currentIndex + 1 < playlist.length) {
-                playSong(currentIndex + 1);
-            }
-        };
     </script>
 </body>
 </html>
