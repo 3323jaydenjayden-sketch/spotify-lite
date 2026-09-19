@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spotify Lite - 智慧雙備援播放</title>
+    <title>Spotify Lite - 網易雲 & Media Session 版</title>
     <style>
         * { box-sizing: border-box; }
         body { background: #121212; color: #fff; font-family: sans-serif; margin: 0; padding: 16px; padding-bottom: 90px; }
@@ -18,7 +18,7 @@
 <body>
 
     <div class="search-bar">
-        <input type="text" id="searchInput" placeholder="搜尋歌名 (例如: Sugar)...">
+        <input type="text" id="searchInput" placeholder="搜尋歌名 (例如: 周杰倫 / 告白氣球)...">
         <button class="src-btn" onclick="runSearch()">搜尋</button>
     </div>
 
@@ -34,24 +34,23 @@
         <button id="play-btn" onclick="togglePlay()" style="background: #1DB954; color: #fff; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 16px; cursor: pointer;">▶</button>
     </div>
 
+    <!-- 原生 HTML5 音訊組件 -->
     <audio id="audio-player" playsinline></audio>
 
     <script>
         const audio = document.getElementById('audio-player');
         const playBtn = document.getElementById('play-btn');
 
-        // 目前存活率與連線品質極高的節點清單 (包含 Invidious 與 Piped 雙重 API)
-        const primaryInstances = [
-            { type: 'piped', url: 'https://pipedapi.kavin.rocks' },
-            { type: 'piped', url: 'https://api.piped.private.coffee' },
-            { type: 'invidious', url: 'https://invidious.nerdvpn.de' },
-            { type: 'invidious', url: 'https://yt.artemislena.eu' }
-        ];
+        // 免費公開的 網易雲 API 服務節點 (可更換為自建的 NeteaseCloudMusicApi 網址)
+        const NETEASE_API = 'https://netease-cloud-music-api-beta-five.vercel.app';
+
+        let playlist = [];
+        let currentIndex = -1;
 
         audio.onplay = () => { playBtn.innerText = "⏸"; };
         audio.onpause = () => { playBtn.innerText = "▶"; };
         audio.onerror = () => {
-            alert("目前節點暫時無回應，請再點一次歌曲嘗試自動切換備援線路！");
+            alert("該歌曲音訊直鏈載入失敗或受版權保護，請嘗試其他歌曲！");
             playBtn.innerText = "▶";
         };
 
@@ -59,6 +58,7 @@
             if (e.key === 'Enter') runSearch();
         });
 
+        // 1. 搜尋歌曲
         async function runSearch() {
             const query = document.getElementById('searchInput').value.trim();
             const resultsContainer = document.getElementById('results');
@@ -68,25 +68,24 @@
             resultsContainer.innerHTML = '<p style="color:#1DB954;">⏳ 搜尋中...</p>';
 
             try {
-                let url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=12`;
-                let res = await fetch(url);
+                let res = await fetch(`${NETEASE_API}/search?keywords=${encodeURIComponent(query)}&limit=15`);
                 let data = await res.json();
 
                 resultsContainer.innerHTML = '';
 
-                if (!data.results || data.results.length === 0) {
+                if (!data.result || !data.result.songs || data.result.songs.length === 0) {
                     resultsContainer.innerHTML = '<p style="color:#888;">❌ 查無結果。</p>';
                     return;
                 }
 
-                data.results.forEach(item => {
-                    const song = {
-                        title: item.trackName || "未知歌名",
-                        artist: item.artistName || "未知歌手",
-                        cover: item.artworkUrl100 ? item.artworkUrl100.replace('100x100bb', '300x300bb') : 'https://via.placeholder.com/100',
-                        query: `${item.artistName} ${item.trackName}`
-                    };
+                playlist = data.result.songs.map(song => ({
+                    id: song.id,
+                    title: song.name,
+                    artist: song.artists ? song.artists.map(a => a.name).join(', ') : '未知歌手',
+                    cover: song.artists && song.artists[0] && song.artists[0].img1v1Url ? song.artists[0].img1v1Url : 'https://via.placeholder.com/300'
+                }));
 
+                playlist.forEach((song, index) => {
                     const div = document.createElement('div');
                     div.className = 'card';
                     div.innerHTML = `
@@ -95,83 +94,77 @@
                             <div style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${song.title}</div>
                             <div style="color:#b3b3b3; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${song.artist}</div>
                         </div>
-                        <button style="background:#1DB954; color:#fff; border:none; padding:6px 12px; border-radius:12px; font-weight:bold;">播放完整版</button>
+                        <button style="background:#1DB954; color:#fff; border:none; padding:6px 12px; border-radius:12px; font-weight:bold;">播放</button>
                     `;
-                    div.onclick = () => playSmartStream(song);
+                    div.onclick = () => playSongByIndex(index);
                     resultsContainer.appendChild(div);
                 });
             } catch (err) {
-                resultsContainer.innerHTML = '<p style="color:red;">搜尋發生錯誤，請檢查網路。</p>';
+                resultsContainer.innerHTML = '<p style="color:red;">搜尋時發生錯誤，請稍後再試。</p>';
+                console.error(err);
             }
         }
 
-        async function playSmartStream(song) {
+        // 2. 取得 MP3 音訊直鏈並播放
+        async function playSongByIndex(index) {
+            if (index < 0 || index >= playlist.length) return;
+            
+            currentIndex = index;
+            const song = playlist[currentIndex];
+
             document.getElementById('track-title').innerText = song.title;
             document.getElementById('track-artist').innerText = song.artist;
             document.getElementById('cover').src = song.cover;
             playBtn.innerText = "⏳";
 
-            let audioUrl = null;
+            try {
+                // 向網易雲 API 索取 mp3 音訊網址
+                let res = await fetch(`${NETEASE_API}/song/url/v1?id=${song.id}&level=standard`);
+                let data = await res.json();
 
-            // 輪詢所有線路 (Piped API & Invidious API 雙備援)
-            for (let node of primaryInstances) {
-                try {
-                    console.log(`嘗試透過 ${node.type} (${node.url}) 解析...`);
+                if (data.data && data.data[0] && data.data[0].url) {
+                    let mp3Url = data.data[0].url.replace('http://', 'https://'); // 強制 HTTPS
+                    audio.src = mp3Url;
 
-                    if (node.type === 'piped') {
-                        // 1. Piped 搜尋
-                        let sRes = await fetch(`${node.url}/search?q=${encodeURIComponent(song.query)}&filter=videos`);
-                        let sData = await sRes.json();
-                        
-                        if (sData.items && sData.items.length > 0) {
-                            let videoId = sData.items[0].url.replace('/watch?v=', '');
-                            // 2. Piped 取得 Audio Stream
-                            let vRes = await fetch(`${node.url}/streams/${videoId}`);
-                            let vData = await vRes.json();
-                            if (vData.audioStreams && vData.audioStreams.length > 0) {
-                                audioUrl = vData.audioStreams[0].url;
-                                break;
-                            }
-                        }
-                    } else if (node.type === 'invidious') {
-                        // Invidious 搜尋與解析
-                        let sRes = await fetch(`${node.url}/api/v1/search?q=${encodeURIComponent(song.query)}&type=video`);
-                        let sData = await sRes.json();
-                        
-                        if (sData && sData.length > 0) {
-                            let videoId = sData[0].videoId;
-                            let vRes = await fetch(`${node.url}/api/v1/videos/${videoId}`);
-                            let vData = await vRes.json();
-                            if (vData.adaptiveFormats) {
-                                let fmt = vData.adaptiveFormats.find(f => f.mimeType && f.mimeType.includes('audio'));
-                                if (fmt && fmt.url) {
-                                    audioUrl = fmt.url;
-                                    break;
-                                }
-                            }
-                        }
+                    // 設定 Media Session (鎖定畫面與控制中心支援)
+                    setupMediaSession(song);
+
+                    let playPromise = audio.play();
+                    if (playPromise !== undefined) {
+                        playPromise.then(() => {
+                            playBtn.innerText = "⏸";
+                        }).catch(err => {
+                            console.log("手機端需手動點擊播放", err);
+                            playBtn.innerText = "▶";
+                        });
                     }
-                } catch (e) {
-                    console.warn(`線路 ${node.url} 無回應，自動切換下一條...`);
-                }
-            }
-
-            if (!audioUrl) {
-                alert("所有串流線路暫時繁忙，請稍後重試！");
-                playBtn.innerText = "▶";
-                return;
-            }
-
-            audio.src = audioUrl;
-            
-            let playPromise = audio.play();
-            if (playPromise !== undefined) {
-                playPromise.then(() => {
-                    playBtn.innerText = "⏸";
-                }).catch(err => {
-                    console.log("手機需要手動點擊播放鍵", err);
+                } else {
+                    alert("該歌曲需要 VIP 權限或暫無免費音訊直鏈！");
                     playBtn.innerText = "▶";
+                }
+            } catch (err) {
+                alert("播放連線失敗！");
+                playBtn.innerText = "▶";
+            }
+        }
+
+        // 3. Media Session API（讓手機鎖定畫面顯示歌名與控制鍵）
+        function setupMediaSession(song) {
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.metadata = new MediaMetadata({
+                    title: song.title,
+                    artist: song.artist,
+                    album: 'Spotify Lite',
+                    artwork: [
+                        { src: song.cover, sizes: '300x300', type: 'image/jpeg' }
+                    ]
                 });
+
+                // 綁定鎖定畫面的控制按鈕事件
+                navigator.mediaSession.setActionHandler('play', () => audio.play());
+                navigator.mediaSession.setActionHandler('pause', () => audio.pause());
+                navigator.mediaSession.setActionHandler('previoustrack', () => playSongByIndex(currentIndex - 1));
+                navigator.mediaSession.setActionHandler('nexttrack', () => playSongByIndex(currentIndex + 1));
             }
         }
 
@@ -183,6 +176,13 @@
                 audio.pause();
             }
         }
+
+        // 播放完畢自動跳下一首
+        audio.onended = () => {
+            if (currentIndex + 1 < playlist.length) {
+                playSongByIndex(currentIndex + 1);
+            }
+        };
     </script>
 </body>
 </html>
