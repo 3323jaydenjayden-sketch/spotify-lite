@@ -7,75 +7,150 @@
 <title>Music Lite</title>
 
 <style>
+
 * {
     box-sizing: border-box;
 }
 
 body {
-    background: #121212;
-    color: white;
-    font-family: Arial, sans-serif;
     margin: 0;
     padding: 16px;
-    padding-bottom: 110px;
+    padding-bottom: 120px;
+
+    background: #121212;
+    color: white;
+
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Arial,
+        sans-serif;
 }
 
-/* 搜尋 */
+/* =========================
+   HEADER
+========================= */
+
+.header {
+    margin-bottom: 20px;
+}
+
+.header h1 {
+    margin: 0;
+    font-size: 24px;
+}
+
+.header p {
+    margin-top: 6px;
+    color: #999;
+    font-size: 13px;
+}
+
+/* =========================
+   SEARCH
+========================= */
 
 .search-bar {
     display: flex;
     gap: 8px;
-    margin-bottom: 20px;
+    margin-bottom: 25px;
 }
 
-input {
+.search-bar input {
     flex: 1;
-    padding: 13px 16px;
-    border-radius: 24px;
+
+    min-width: 0;
+
+    padding: 13px 17px;
+
     border: none;
+    outline: none;
+
+    border-radius: 25px;
+
     background: #242424;
     color: white;
-    outline: none;
+
     font-size: 15px;
 }
 
-.src-btn {
-    padding: 12px 20px;
-    border-radius: 24px;
-    border: none;
-    background: #1DB954;
-    color: white;
-    font-weight: bold;
-    cursor: pointer;
+.search-bar input::placeholder {
+    color: #777;
 }
 
-/* 歌曲 */
+.search-btn {
+    border: none;
 
-.card {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+    padding: 0 20px;
 
-    background: #282828;
+    border-radius: 25px;
 
-    padding: 10px;
+    background: #1DB954;
+    color: white;
 
-    margin-bottom: 8px;
-
-    border-radius: 10px;
+    font-weight: bold;
 
     cursor: pointer;
 
     transition: 0.15s;
 }
 
+.search-btn:hover {
+    background: #1ed760;
+}
+
+/* =========================
+   STATUS
+========================= */
+
+.status {
+    color: #999;
+
+    font-size: 14px;
+
+    margin: 15px 0;
+}
+
+/* =========================
+   SONG CARD
+========================= */
+
+.card {
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+    padding: 10px;
+
+    margin-bottom: 8px;
+
+    background: #282828;
+
+    border-radius: 9px;
+
+    cursor: pointer;
+
+    transition:
+        background 0.15s,
+        transform 0.1s;
+}
+
 .card:hover {
     background: #383838;
 }
 
+.card:active {
+    transform: scale(0.99);
+}
+
 .cover {
-    width: 55px;
-    height: 55px;
+    width: 58px;
+    height: 58px;
+
+    flex-shrink: 0;
 
     object-fit: cover;
 
@@ -91,6 +166,8 @@ input {
 }
 
 .song-title {
+    font-size: 15px;
+
     font-weight: bold;
 
     white-space: nowrap;
@@ -105,7 +182,7 @@ input {
 
     font-size: 13px;
 
-    margin-top: 4px;
+    margin-top: 5px;
 
     white-space: nowrap;
 
@@ -114,38 +191,45 @@ input {
     text-overflow: ellipsis;
 }
 
-.play-small {
+.song-duration {
+    color: #777;
+
+    font-size: 11px;
+
+    margin-top: 4px;
+}
+
+.small-play {
+    width: 40px;
+    height: 40px;
+
+    flex-shrink: 0;
+
     border: none;
+
+    border-radius: 50%;
 
     background: #1DB954;
 
     color: white;
 
-    width: 42px;
-    height: 42px;
-
-    border-radius: 50%;
+    font-size: 15px;
 
     cursor: pointer;
-
-    font-size: 16px;
 }
 
-/* Player */
+/* =========================
+   BOTTOM PLAYER
+========================= */
 
 .player {
     position: fixed;
 
-    bottom: 0;
+    z-index: 100;
 
     left: 0;
     right: 0;
-
-    background: #181818;
-
-    border-top: 1px solid #333;
-
-    padding: 10px 14px;
+    bottom: 0;
 
     display: flex;
 
@@ -153,16 +237,26 @@ input {
 
     gap: 12px;
 
-    z-index: 100;
+    padding: 10px 14px;
+
+    background: rgba(24,24,24,0.98);
+
+    border-top: 1px solid #333;
+
+    backdrop-filter: blur(10px);
 }
 
 .player-cover {
     width: 52px;
     height: 52px;
 
-    border-radius: 5px;
+    flex-shrink: 0;
 
     object-fit: cover;
+
+    border-radius: 5px;
+
+    background: #333;
 }
 
 .player-info {
@@ -172,6 +266,8 @@ input {
 }
 
 .player-title {
+    font-size: 14px;
+
     font-weight: bold;
 
     white-space: nowrap;
@@ -182,82 +278,132 @@ input {
 }
 
 .player-artist {
+    margin-top: 4px;
+
     color: #aaa;
 
     font-size: 12px;
 
-    margin-top: 4px;
+    white-space: nowrap;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
 }
 
-.player-controls {
+/* =========================
+   CONTROLS
+========================= */
+
+.controls {
     display: flex;
 
     align-items: center;
 
-    gap: 7px;
+    gap: 5px;
 }
 
-.control {
+.control-btn {
+    width: 38px;
+    height: 38px;
+
     border: none;
 
     background: transparent;
 
     color: white;
 
-    font-size: 20px;
+    font-size: 19px;
 
     cursor: pointer;
 }
 
-.main-play {
+.play-btn {
     width: 42px;
     height: 42px;
 
-    border-radius: 50%;
-
     border: none;
+
+    border-radius: 50%;
 
     background: #1DB954;
 
     color: white;
 
-    cursor: pointer;
+    font-size: 16px;
 
-    font-size: 17px;
+    cursor: pointer;
 }
 
-/* 進度條 */
+/* =========================
+   PROGRESS
+========================= */
 
-.progress-area {
+.progress-container {
     position: fixed;
 
-    bottom: 74px;
+    z-index: 101;
 
     left: 0;
     right: 0;
 
+    bottom: 73px;
+
     padding: 0 14px;
 
     background: #181818;
-
-    z-index: 101;
 }
 
 #progress {
     width: 100%;
+
+    height: 4px;
+
+    margin: 0;
 
     accent-color: #1DB954;
 
     cursor: pointer;
 }
 
-/* 手機 */
+/* =========================
+   TIME
+========================= */
+
+.time-row {
+    position: fixed;
+
+    z-index: 102;
+
+    left: 14px;
+    right: 14px;
+
+    bottom: 77px;
+
+    display: flex;
+
+    justify-content: space-between;
+
+    pointer-events: none;
+
+    color: #777;
+
+    font-size: 9px;
+}
+
+/* =========================
+   MOBILE
+========================= */
 
 @media (max-width: 600px) {
 
     body {
         padding: 12px;
-        padding-bottom: 105px;
+        padding-bottom: 115px;
+    }
+
+    .header h1 {
+        font-size: 21px;
     }
 
     .player {
@@ -265,47 +411,87 @@ input {
     }
 
     .player-cover {
-        width: 45px;
-        height: 45px;
+        width: 46px;
+        height: 46px;
     }
 
     .player-info {
-        max-width: 150px;
+        max-width: 145px;
+    }
+
+    .control-btn {
+        width: 32px;
     }
 
 }
+
 </style>
 </head>
 
+
 <body>
 
-<h2>🎵 Music Lite</h2>
+<!-- =========================
+     HEADER
+========================= -->
+
+<div class="header">
+
+    <h1>🎵 Music Lite</h1>
+
+    <p>
+        免費音樂播放器
+    </p>
+
+</div>
+
+
+<!-- =========================
+     SEARCH
+========================= -->
 
 <div class="search-bar">
 
     <input
         id="searchInput"
         type="text"
-        placeholder="搜尋免費音樂，例如：piano"
+        placeholder="搜尋歌曲，例如：piano、cinematic..."
+        autocomplete="off"
     >
 
     <button
-        class="src-btn"
-        onclick="runSearch()"
+        id="searchBtn"
+        class="search-btn"
+        onclick="searchMusic()"
     >
         搜尋
     </button>
 
 </div>
 
-<h3>🔍 搜尋結果</h3>
 
-<div id="results"></div>
+<!-- =========================
+     RESULTS
+========================= -->
+
+<h3>
+    🔍 搜尋結果
+</h3>
+
+<div id="results">
+
+    <p class="status">
+        輸入關鍵字開始搜尋
+    </p>
+
+</div>
 
 
-<!-- 進度條 -->
+<!-- =========================
+     PROGRESS
+========================= -->
 
-<div class="progress-area">
+<div class="progress-container">
 
     <input
         id="progress"
@@ -318,27 +504,30 @@ input {
 </div>
 
 
-<!-- Player -->
+<!-- =========================
+     PLAYER
+========================= -->
 
 <div class="player">
 
     <img
-        id="cover"
+        id="playerCover"
         class="player-cover"
         src="https://via.placeholder.com/100"
+        alt="cover"
     >
 
     <div class="player-info">
 
         <div
-            id="track-title"
+            id="playerTitle"
             class="player-title"
         >
-            尚未播放
+            尚未播放歌曲
         </div>
 
         <div
-            id="track-artist"
+            id="playerArtist"
             class="player-artist"
         >
             --
@@ -346,26 +535,30 @@ input {
 
     </div>
 
-    <div class="player-controls">
+
+    <div class="controls">
 
         <button
-            class="control"
+            class="control-btn"
             onclick="previousSong()"
+            title="上一首"
         >
             ⏮
         </button>
 
         <button
-            id="play-btn"
-            class="main-play"
+            id="playButton"
+            class="play-btn"
             onclick="togglePlay()"
+            title="播放"
         >
             ▶
         </button>
 
         <button
-            class="control"
+            class="control-btn"
             onclick="nextSong()"
+            title="下一首"
         >
             ⏭
         </button>
@@ -375,234 +568,407 @@ input {
 </div>
 
 
-<audio id="audio-element"></audio>
+<!-- AUDIO -->
+
+<audio
+    id="audio"
+    preload="metadata"
+></audio>
 
 
 <script>
 
-const API =
+/* ==================================================
+   API
+================================================== */
+
+const API_URL =
     "https://api.freetouse.com/v3/music/tracks/search";
 
-const audio =
-    document.getElementById("audio-element");
 
-const playBtn =
-    document.getElementById("play-btn");
+/* ==================================================
+   DOM
+================================================== */
+
+const audio =
+    document.getElementById("audio");
+
+const results =
+    document.getElementById("results");
+
+const searchInput =
+    document.getElementById("searchInput");
+
+const searchBtn =
+    document.getElementById("searchBtn");
+
+const playButton =
+    document.getElementById("playButton");
 
 const progress =
     document.getElementById("progress");
 
-const resultsContainer =
-    document.getElementById("results");
+const playerTitle =
+    document.getElementById("playerTitle");
 
+const playerArtist =
+    document.getElementById("playerArtist");
+
+const playerCover =
+    document.getElementById("playerCover");
+
+
+/* ==================================================
+   STATE
+================================================== */
 
 let songs = [];
 
 let currentIndex = -1;
 
 
-/* Enter 搜尋 */
+/* ==================================================
+   ENTER 搜尋
+================================================== */
 
-document
-.getElementById("searchInput")
-.addEventListener("keydown", function(e) {
+searchInput.addEventListener(
+    "keydown",
+    function(event) {
 
-    if (e.key === "Enter") {
+        if (event.key === "Enter") {
 
-        runSearch();
+            searchMusic();
+
+        }
 
     }
+);
 
-});
 
+/* ==================================================
+   SEARCH
+================================================== */
 
-/* 搜尋 */
-
-async function runSearch() {
+async function searchMusic() {
 
     const query =
-        document
-        .getElementById("searchInput")
-        .value
-        .trim();
+        searchInput.value.trim();
+
 
     if (!query) {
 
-        alert("請輸入搜尋內容");
+        alert("請輸入歌曲名稱");
 
         return;
 
     }
 
-    resultsContainer.innerHTML = `
-        <p style="color:#1DB954">
-            ⏳ 搜尋中...
+
+    results.innerHTML = `
+        <p class="status">
+            ⏳ 搜尋「${escapeHTML(query)}」中...
         </p>
     `;
+
+
+    searchBtn.disabled = true;
+
+    searchBtn.textContent = "搜尋中";
+
 
     try {
 
         const url =
-            `${API}?query=${encodeURIComponent(query)}&limit=50`;
+            API_URL +
+            "?query=" +
+            encodeURIComponent(query) +
+            "&limit=50";
+
+
+        console.log(
+            "API URL:",
+            url
+        );
+
 
         const response =
             await fetch(url);
 
+
         if (!response.ok) {
 
             throw new Error(
-                "API HTTP " + response.status
+                "HTTP " + response.status
             );
 
         }
 
-        const data =
+
+        const json =
             await response.json();
 
-        console.log("API DATA:", data);
+
+        console.log(
+            "API Response:",
+            json
+        );
+
 
         /*
-         * Free To Use API 的資料通常放在 data
+         * 你的 JSON 結構：
+         *
+         * {
+         *   ok: true,
+         *   data: [...]
+         * }
          */
 
-        const list =
-            Array.isArray(data)
-            ? data
-            : data.data || data.results || [];
+        if (
+            !json ||
+            !Array.isArray(json.data)
+        ) {
+
+            throw new Error(
+                "API 回傳格式錯誤"
+            );
+
+        }
+
 
         songs =
-            list.map(normalizeSong)
-                .filter(song => song.audio);
+            json.data
+            .map(formatSong)
+            .filter(
+                song => song.audio
+            );
+
 
         renderSongs();
 
-    } catch(error) {
 
-        console.error(error);
+    } catch (error) {
 
-        resultsContainer.innerHTML = `
-            <p style="color:#ff5555">
-                ❌ 搜尋失敗
+        console.error(
+            "Search error:",
+            error
+        );
+
+
+        results.innerHTML = `
+
+            <p
+                style="
+                    color:#ff5555;
+                    font-weight:bold;
+                "
+            >
+                ❌ Load failed
             </p>
 
-            <p style="color:#888">
+            <p
+                style="
+                    color:#888;
+                    font-size:13px;
+                "
+            >
                 ${escapeHTML(error.message)}
             </p>
+
         `;
 
     }
 
+
+    searchBtn.disabled = false;
+
+    searchBtn.textContent = "搜尋";
+
 }
 
 
-/* 整理歌曲資料 */
+/* ==================================================
+   FORMAT API SONG
+================================================== */
 
-function normalizeSong(item) {
+function formatSong(track) {
+
+    /*
+     * 你的 API JSON：
+     *
+     * title
+     *
+     * artists:
+     * [
+     *   [
+     *     0,
+     *     {
+     *       name: "Johny Grimes"
+     *     }
+     *   ]
+     * ]
+     *
+     * thumbnails.md
+     *
+     * files.mp3
+     */
+
+
+    let artist =
+        "未知藝術家";
+
+
+    if (
+        Array.isArray(track.artists) &&
+        track.artists.length > 0
+    ) {
+
+        const artistData =
+            track.artists[0][1];
+
+
+        if (
+            artistData &&
+            artistData.name
+        ) {
+
+            artist =
+                artistData.name;
+
+        }
+
+    }
+
 
     return {
 
         id:
-            item.id ||
-            crypto.randomUUID(),
+            track.id,
 
         title:
-            item.title ||
-            item.name ||
+            track.title ||
             "未知歌曲",
 
         artist:
-            item.artist ||
-            item.artist_name ||
-            item.artistName ||
-            "未知藝術家",
+            artist,
 
         cover:
-            item.cover ||
-            item.cover_url ||
-            item.image ||
-            item.artwork ||
+            track.thumbnails?.md ||
+            track.thumbnails?.lg ||
             "https://via.placeholder.com/300",
 
         audio:
-            item.audio ||
-            item.audio_url ||
-            item.stream_url ||
-            item.url ||
-            item.download_url ||
-            ""
+            track.files?.mp3 ||
+            "",
+
+        duration:
+            Number(track.duration) || 0
 
     };
 
 }
 
 
-/* 顯示歌曲 */
+/* ==================================================
+   RENDER SONGS
+================================================== */
 
 function renderSongs() {
 
-    resultsContainer.innerHTML = "";
+    results.innerHTML = "";
+
 
     if (songs.length === 0) {
 
-        resultsContainer.innerHTML = `
-            <p style="color:#888">
-                ❌ 沒有找到可以播放的歌曲
+        results.innerHTML = `
+
+            <p class="status">
+                ❌ 找不到可播放歌曲
             </p>
+
         `;
 
         return;
 
     }
 
-    songs.forEach((song, index) => {
 
-        const div =
-            document.createElement("div");
+    songs.forEach(
+        function(song, index) {
 
-        div.className = "card";
+            const card =
+                document.createElement("div");
 
-        div.innerHTML = `
 
-            <img
-                class="cover"
-                src="${escapeAttribute(song.cover)}"
-                onerror="
-                    this.src='https://via.placeholder.com/100'
-                "
-            >
+            card.className =
+                "card";
 
-            <div class="song-info">
 
-                <div class="song-title">
-                    ${escapeHTML(song.title)}
+            const duration =
+                formatTime(
+                    song.duration
+                );
+
+
+            card.innerHTML = `
+
+                <img
+                    class="cover"
+                    src="${escapeAttribute(song.cover)}"
+                    alt="cover"
+                    onerror="
+                        this.src='https://via.placeholder.com/100'
+                    "
+                >
+
+
+                <div class="song-info">
+
+                    <div class="song-title">
+                        ${escapeHTML(song.title)}
+                    </div>
+
+                    <div class="song-artist">
+                        ${escapeHTML(song.artist)}
+                    </div>
+
+                    <div class="song-duration">
+                        ${duration}
+                    </div>
+
                 </div>
 
-                <div class="song-artist">
-                    ${escapeHTML(song.artist)}
-                </div>
 
-            </div>
+                <button
+                    class="small-play"
+                    type="button"
+                >
+                    ▶
+                </button>
 
-            <button class="play-small">
-                ▶
-            </button>
+            `;
 
-        `;
 
-        div.addEventListener("click", function() {
+            card.addEventListener(
+                "click",
+                function() {
 
-            playSong(index);
+                    playSong(index);
 
-        });
+                }
+            );
 
-        resultsContainer.appendChild(div);
 
-    });
+            results.appendChild(card);
+
+        }
+    );
 
 }
 
 
-/* 播放歌曲 */
+/* ==================================================
+   PLAY SONG
+================================================== */
 
 function playSong(index) {
 
@@ -615,62 +981,113 @@ function playSong(index) {
 
     }
 
-    currentIndex = index;
 
     const song =
         songs[index];
 
-    document
-        .getElementById("track-title")
-        .textContent =
+
+    currentIndex =
+        index;
+
+
+    console.log(
+        "Playing:",
+        song
+    );
+
+
+    /*
+     * 更新 Player
+     */
+
+    playerTitle.textContent =
         song.title;
 
-    document
-        .getElementById("track-artist")
-        .textContent =
+
+    playerArtist.textContent =
         song.artist;
 
-    document
-        .getElementById("cover")
-        .src =
+
+    playerCover.src =
         song.cover;
+
+
+    /*
+     * 使用真正 MP3
+     *
+     * files.mp3
+     */
 
     if (!song.audio) {
 
         alert(
-            "這首歌曲沒有可用的音訊網址"
+            "這首歌曲沒有 MP3 音訊"
         );
 
         return;
 
     }
 
-    audio.src = song.audio;
+
+    /*
+     * 停止目前歌曲
+     */
+
+    audio.pause();
+
+
+    /*
+     * 載入完整 MP3
+     */
+
+    audio.src =
+        song.audio;
+
 
     audio.load();
 
+
+    /*
+     * 播放
+     */
+
     audio.play()
-        .then(() => {
+    .then(
+        function() {
 
-            playBtn.textContent = "⏸";
+            playButton.textContent =
+                "⏸";
 
-        })
-        .catch(error => {
+        }
+    )
+    .catch(
+        function(error) {
 
-            console.error(error);
-
-            alert(
-                "瀏覽器無法播放這個音訊"
+            console.error(
+                "Playback error:",
+                error
             );
 
-        });
+
+            alert(
+                "播放失敗，請再點一次播放"
+            );
+
+        }
+    );
 
 }
 
 
-/* 播放 / 暫停 */
+/* ==================================================
+   PLAY / PAUSE
+================================================== */
 
 function togglePlay() {
+
+    /*
+     * 尚未選歌曲
+     */
 
     if (!audio.src) {
 
@@ -684,24 +1101,41 @@ function togglePlay() {
 
     }
 
+
     if (audio.paused) {
 
-        audio.play();
+        audio.play()
+        .then(
+            function() {
 
-        playBtn.textContent = "⏸";
+                playButton.textContent =
+                    "⏸";
+
+            }
+        )
+        .catch(
+            function(error) {
+
+                console.error(error);
+
+            }
+        );
 
     } else {
 
         audio.pause();
 
-        playBtn.textContent = "▶";
+        playButton.textContent =
+            "▶";
 
     }
 
 }
 
 
-/* 下一首 */
+/* ==================================================
+   NEXT
+================================================== */
 
 function nextSong() {
 
@@ -711,21 +1145,28 @@ function nextSong() {
 
     }
 
+
     let next =
         currentIndex + 1;
 
-    if (next >= songs.length) {
+
+    if (
+        next >= songs.length
+    ) {
 
         next = 0;
 
     }
+
 
     playSong(next);
 
 }
 
 
-/* 上一首 */
+/* ==================================================
+   PREVIOUS
+================================================== */
 
 function previousSong() {
 
@@ -735,8 +1176,10 @@ function previousSong() {
 
     }
 
+
     let previous =
         currentIndex - 1;
+
 
     if (previous < 0) {
 
@@ -745,12 +1188,15 @@ function previousSong() {
 
     }
 
+
     playSong(previous);
 
 }
 
 
-/* 播放完自動下一首 */
+/* ==================================================
+   AUTO NEXT
+================================================== */
 
 audio.addEventListener(
     "ended",
@@ -762,77 +1208,180 @@ audio.addEventListener(
 );
 
 
-/* 更新播放進度 */
+/* ==================================================
+   AUDIO ERROR
+================================================== */
+
+audio.addEventListener(
+    "error",
+    function() {
+
+        console.error(
+            "Audio error:",
+            audio.error
+        );
+
+    }
+);
+
+
+/* ==================================================
+   PROGRESS
+================================================== */
 
 audio.addEventListener(
     "timeupdate",
     function() {
 
-        if (!audio.duration) {
+        if (
+            !audio.duration ||
+            !isFinite(audio.duration)
+        ) {
 
             return;
 
         }
 
+
+        const percent =
+            (
+                audio.currentTime /
+                audio.duration
+            ) * 100;
+
+
         progress.value =
-            (audio.currentTime /
-             audio.duration) * 100;
+            percent;
 
     }
 );
 
 
-/* 拖曳進度 */
+/* ==================================================
+   SEEK
+================================================== */
 
 progress.addEventListener(
     "input",
     function() {
 
-        if (!audio.duration) {
+        if (
+            !audio.duration ||
+            !isFinite(audio.duration)
+        ) {
 
             return;
 
         }
 
+
         audio.currentTime =
-            (progress.value / 100)
-            * audio.duration;
+            (
+                Number(progress.value) /
+                100
+            ) * audio.duration;
 
     }
 );
 
 
-/* 播放狀態 */
+/* ==================================================
+   PLAY STATE
+================================================== */
 
 audio.addEventListener(
     "play",
     function() {
 
-        playBtn.textContent = "⏸";
+        playButton.textContent =
+            "⏸";
 
     }
 );
+
 
 audio.addEventListener(
     "pause",
     function() {
 
-        playBtn.textContent = "▶";
+        playButton.textContent =
+            "▶";
 
     }
 );
 
 
-/* 防止 HTML 注入 */
+/* ==================================================
+   TIME FORMAT
+================================================== */
+
+function formatTime(seconds) {
+
+    if (
+        !seconds ||
+        !isFinite(seconds)
+    ) {
+
+        return "0:00";
+
+    }
+
+
+    const minutes =
+        Math.floor(
+            seconds / 60
+        );
+
+
+    const secs =
+        Math.floor(
+            seconds % 60
+        )
+        .toString()
+        .padStart(2, "0");
+
+
+    return (
+        minutes +
+        ":" +
+        secs
+    );
+
+}
+
+
+/* ==================================================
+   SECURITY
+================================================== */
 
 function escapeHTML(value) {
 
     return String(value)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
+
+        .replaceAll(
+            "&",
+            "&amp;"
+        )
+
+        .replaceAll(
+            "<",
+            "&lt;"
+        )
+
+        .replaceAll(
+            ">",
+            "&gt;"
+        )
+
+        .replaceAll(
+            '"',
+            "&quot;"
+        )
+
+        .replaceAll(
+            "'",
+            "&#039;"
+        );
 
 }
 
