@@ -1,88 +1,35 @@
-// 使用最穩定的 Invidious / Piped 公開 API 節點
-const API_NODES = [
-    "https://inv.nerdvpn.de",
-    "https://api.piped.privacydev.net",
-    "https://vid.puppethead.tw",
-    "https://pipedapi.tokhmi.xyz"
-];
-
-let nodeIndex = 0;
-
-// 搜尋歌曲
+// 使用 iTunes 免費官方 API 搜尋歌曲（100% 穩定不擋 CORS）
 async function fetchSearchResults(query) {
     if (!query) return [];
-
-    for (let i = 0; i < API_NODES.length; i++) {
-        const baseUrl = API_NODES[nodeIndex];
-        try {
-            const isPiped = baseUrl.includes("piped");
-            const url = isPiped 
-                ? `${baseUrl}/search?q=${encodeURIComponent(query)}&filter=music_songs`
-                : `${baseUrl}/api/v1/search?q=${encodeURIComponent(query)}&type=video`;
-
-            const res = await fetch(url);
-            if (!res.ok) throw new Error("API Status Error");
-            
-            const data = await res.json();
-            const rawList = isPiped ? data.items : data;
-
-            if (Array.isArray(rawList) && rawList.length > 0) {
-                return rawList.map(item => {
-                    const id = isPiped 
-                        ? (item.url ? item.url.replace('/watch?v=', '') : '')
-                        : item.videoId;
-
-                    return {
-                        videoId: id,
-                        title: item.title || "未知歌名",
-                        artist: isPiped ? (item.uploaderName || item.uploader || "未知歌手") : (item.author || "未知歌手"),
-                        cover: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`
-                    };
-                }).filter(x => x.videoId);
-            }
-        } catch (err) {
-            console.warn(`節點 ${baseUrl} 失敗，自動切換下一個...`);
-            nodeIndex = (nodeIndex + 1) % API_NODES.length;
+    try {
+        const url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=15`;
+        const res = await fetch(url);
+        if (!res.ok) return [];
+        const data = await res.json();
+        
+        if (data.results && data.results.length > 0) {
+            return data.results.map(item => ({
+                videoId: `${item.artistName} - ${item.trackName}`, // 用歌名與歌手當播歌 key
+                title: item.trackName || "未知歌名",
+                artist: item.artistName || "未知歌手",
+                cover: item.artworkUrl100 ? item.artworkUrl100.replace('100x100bb', '300x300bb') : 'https://via.placeholder.com/100',
+                previewUrl: item.previewUrl // iTunes 提供 30 秒試聽串流
+            }));
         }
+    } catch (e) {
+        console.error("iTunes API 錯誤:", e);
     }
     return [];
 }
 
-// 取得播放音訊
-async function fetchAudioStream(videoId) {
-    for (let i = 0; i < API_NODES.length; i++) {
-        const baseUrl = API_NODES[nodeIndex];
-        try {
-            const isPiped = baseUrl.includes("piped");
-            const url = isPiped 
-                ? `${baseUrl}/streams/${videoId}`
-                : `${baseUrl}/api/v1/videos/${videoId}`;
-
-            const res = await fetch(url);
-            if (!res.ok) throw new Error("Stream Error");
-            
-            const data = await res.json();
-
-            if (isPiped && data.audioStreams?.length) {
-                const audio = data.audioStreams.find(s => s.mimeType?.includes('audio/mp4')) || data.audioStreams[0];
-                return {
-                    title: data.title,
-                    artist: data.uploader,
-                    cover: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-                    url: audio.url
-                };
-            } else if (!isPiped && data.adaptiveFormats?.length) {
-                const audio = data.adaptiveFormats.find(s => s.type?.includes('audio')) || data.formatStreams[0];
-                return {
-                    title: data.title,
-                    artist: data.author,
-                    cover: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-                    url: audio.url
-                };
-            }
-        } catch (err) {
-            nodeIndex = (nodeIndex + 1) % API_NODES.length;
-        }
+async function fetchAudioStream(song) {
+    // 優先回傳 iTunes 的 30 秒高清串流，若要完整版可直接丟音訊 URL
+    if (song.previewUrl) {
+        return {
+            title: song.title,
+            artist: song.artist,
+            url: song.previewUrl
+        };
     }
     return null;
 }
