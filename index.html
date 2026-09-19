@@ -3,45 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spotify Lite - YouTube 海量音樂庫</title>
+    <title>Spotify Lite - 音樂搜尋與播放器</title>
     <style>
         * { box-sizing: border-box; }
-        body { background: #121212; color: #fff; font-family: sans-serif; margin: 0; padding: 16px; padding-bottom: 120px; }
+        body { background: #121212; color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 16px; padding-bottom: 140px; }
         
         .search-bar { display: flex; gap: 8px; margin-bottom: 20px; }
-        input { flex: 1; padding: 12px; border-radius: 20px; border: none; background: #242424; color: #fff; outline: none; font-size: 14px; }
+        input { flex: 1; padding: 12px 16px; border-radius: 20px; border: none; background: #242424; color: #fff; outline: none; font-size: 14px; }
         button.src-btn { padding: 12px 20px; border-radius: 20px; border: none; background: #1DB954; color: #fff; font-weight: bold; cursor: pointer; }
         
-        .card { display: flex; align-items: center; gap: 12px; background: #282828; padding: 10px; margin-bottom: 8px; border-radius: 8px; cursor: pointer; }
+        .card { display: flex; align-items: center; gap: 12px; background: #282828; padding: 10px; margin-bottom: 8px; border-radius: 8px; }
         .card:hover { background: #383838; }
         
-        /* 底部固定音樂面板 */
+        .btn-group { display: flex; gap: 6px; }
+        .play-btn { background: #1DB954; color: #fff; border: none; padding: 8px 12px; border-radius: 16px; font-weight: bold; cursor: pointer; font-size: 12px; }
+        .yt-btn { background: #FF0000; color: #fff; border: none; padding: 8px 12px; border-radius: 16px; font-weight: bold; cursor: pointer; font-size: 12px; text-decoration: none; }
+        
+        /* 底部固定播放器 */
         .player-panel { 
             position: fixed; bottom: 0; left: 0; right: 0; 
             background: #181818; border-top: 1px solid #282828; 
             padding: 12px; z-index: 999;
-            display: flex; flex-direction: column; align-items: center; gap: 8px;
+            display: flex; flex-direction: column; gap: 8px;
         }
-        .player-info { display: flex; align-items: center; gap: 12px; width: 100%; }
+        .player-info { display: flex; align-items: center; gap: 12px; }
         
-        /* 隱藏/極小化 YouTube 官方播放器視窗 (只留下聲音與控制) */
-        #yt-player-container {
+        #player-frame {
             width: 100%;
-            height: 60px;
+            height: 80px;
+            border: none;
             border-radius: 8px;
-            overflow: hidden;
-            display: none; /* 有播放時才顯示小視窗 */
+            display: none;
         }
     </style>
 </head>
 <body>
 
     <div class="search-bar">
-        <input type="text" id="searchInput" placeholder="搜尋任意歌名 / 歌手 (例如: 告白氣球, 周杰倫, Taylor Swift)...">
+        <input type="text" id="searchInput" placeholder="搜尋歌名 / 歌手 (例如: 告白氣球, 周杰倫, Taylor Swift)...">
         <button class="src-btn" onclick="runSearch()">搜尋</button>
     </div>
 
-    <h3>🔍 搜尋結果 (海量音樂庫)</h3>
+    <h3>🔍 搜尋結果</h3>
     <div id="results"></div>
 
     <!-- 底部播放介面 -->
@@ -49,35 +52,21 @@
         <div class="player-info">
             <img id="cover" src="https://via.placeholder.com/48" style="width: 48px; height: 48px; border-radius: 4px; object-fit: cover;">
             <div style="flex: 1; overflow: hidden;">
-                <div id="track-title" style="font-weight: bold; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">未播放歌曲</div>
-                <div id="track-artist" style="color: #b3b3b3; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">點擊上方歌曲開始播放</div>
+                <div id="track-title" style="font-weight: bold; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">未選擇歌曲</div>
+                <div id="track-artist" style="color: #b3b3b3; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">請搜尋並點擊播放</div>
             </div>
-            <button id="play-btn" onclick="togglePlay()" style="background: #1DB954; color: #fff; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 16px; cursor: pointer;">▶</button>
+            <a id="external-link" href="#" target="_blank" style="display:none;" class="yt-btn">在 YT 開啟</a>
         </div>
         
-        <!-- 官方 YouTube IFrame 載入區 -->
-        <div id="yt-player-container">
-            <div id="yt-player"></div>
-        </div>
+        <!-- 內嵌播放器視窗 -->
+        <iframe id="player-frame" allow="autoplay; encrypted-media"></iframe>
     </div>
 
-    <!-- 載入 YouTube 官方 API SDK -->
-    <script src="https://www.youtube.com/iframe_api"></script>
-
     <script>
-        let player;
-        let isApiReady = false;
-
-        // YouTube API 初始化完成時自動觸發
-        function onYouTubeIframeAPIReady() {
-            isApiReady = true;
-        }
-
         document.getElementById('searchInput').addEventListener('keyup', (e) => {
             if (e.key === 'Enter') runSearch();
         });
 
-        // 使用 iTunes API 搜尋高畫質專輯封面與精準歌名，再連結至 YouTube 庫
         async function runSearch() {
             const query = document.getElementById('searchInput').value.trim();
             const resultsContainer = document.getElementById('results');
@@ -103,6 +92,7 @@
                         title: item.trackName || "未知歌名",
                         artist: item.artistName || "未知歌手",
                         cover: item.artworkUrl100 ? item.artworkUrl100.replace('100x100bb', '300x300bb') : 'https://via.placeholder.com/300',
+                        previewUrl: item.previewUrl,
                         query: `${item.artistName} ${item.trackName}`
                     };
 
@@ -114,9 +104,11 @@
                             <div style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${song.title}</div>
                             <div style="color:#b3b3b3; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${song.artist}</div>
                         </div>
-                        <button style="background:#1DB954; color:#fff; border:none; padding:6px 12px; border-radius:12px; font-weight:bold;">播放完整版</button>
+                        <div class="btn-group">
+                            <button class="play-btn" onclick='playEmbedded("${encodeURIComponent(song.query)}", "${encodeURIComponent(song.title)}", "${encodeURIComponent(song.artist)}", "${song.cover}")'>內嵌播放</button>
+                            <a class="yt-btn" href="https://www.youtube.com/results?search_query=${encodeURIComponent(song.query)}" target="_blank">YouTube</a>
+                        </div>
                     `;
-                    div.onclick = () => playSong(song);
                     resultsContainer.appendChild(div);
                 });
             } catch (err) {
@@ -124,33 +116,27 @@
             }
         }
 
-        function playSong(song) {
-            document.getElementById('track-title').innerText = song.title;
-            document.getElementById('track-artist').innerText = song.artist;
-            document.getElementById('cover').src = song.cover;
-            
-            const playerBox = document.getElementById('yt-player-container');
-            playerBox.style.display = 'block';
+        function playEmbedded(encodedQuery, encodedTitle, encodedArtist, cover) {
+            const query = decodeURIComponent(encodedQuery);
+            const title = decodeURIComponent(encodedTitle);
+            const artist = decodeURIComponent(encodedArtist);
 
-            // 使用 YouTube 官方內嵌語法搜尋並播放完整音軌
-            const embedUrl = `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(song.query)}&autoplay=1&playsinline=1`;
-            
-            playerBox.innerHTML = `<iframe id="yt-iframe" width="100%" height="60" src="${embedUrl}" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
-            
-            document.getElementById('play-btn').innerText = "⏸";
-        }
+            document.getElementById('track-title').innerText = title;
+            document.getElementById('track-artist').innerText = artist;
+            document.getElementById('cover').src = cover;
 
-        function togglePlay() {
-            const iframe = document.getElementById('yt-iframe');
-            if (!iframe) return;
+            const frame = document.getElementById('player-frame');
+            const extLink = document.getElementById('external-link');
             
-            const btn = document.getElementById('play-btn');
-            if (btn.innerText === "⏸") {
-                btn.innerText = "▶";
-                // 暫停時可將 src 清空或重新載入
-            } else {
-                btn.innerText = "⏸";
-            }
+            // 帶入網域 origin 防止部份權限擋存
+            const embedUrl = `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(query)}&autoplay=1`;
+            
+            frame.src = embedUrl;
+            frame.style.display = 'block';
+
+            // 設定外部開啟連結，做為備用方案
+            extLink.href = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+            extLink.style.display = 'inline-block';
         }
     </script>
 </body>
