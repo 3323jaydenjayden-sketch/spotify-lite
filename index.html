@@ -4,7 +4,101 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Spotify Lite</title>
-    <link rel="stylesheet" href="css/style.css">
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            background: #121212; 
+            color: #fff; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            padding-bottom: 220px; 
+        }
+        
+        .header { margin-bottom: 24px; }
+        .header h1 { margin: 0 0 16px 0; font-size: 28px; color: #1DB954; }
+
+        .search-bar { display: flex; gap: 10px; margin-bottom: 24px; }
+        input { 
+            flex: 1; 
+            padding: 14px 18px; 
+            border-radius: 25px; 
+            border: 1px solid #333; 
+            background: #242424; 
+            color: #fff; 
+            outline: none; 
+            font-size: 15px; 
+        }
+        input:focus { border-color: #1DB954; }
+        button.src-btn { 
+            padding: 14px 24px; 
+            border-radius: 25px; 
+            border: none; 
+            background: #1DB954; 
+            color: #fff; 
+            font-weight: bold; 
+            font-size: 15px;
+            cursor: pointer; 
+            transition: 0.2s;
+        }
+        button.src-btn:hover { background: #1ed760; transform: scale(1.02); }
+
+        .section-title { font-size: 18px; font-weight: bold; margin-bottom: 16px; color: #b3b3b3; }
+        
+        .card { 
+            display: flex; 
+            align-items: center; 
+            gap: 16px; 
+            background: #181818; 
+            padding: 12px 16px; 
+            margin-bottom: 10px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            transition: background 0.2s;
+        }
+        .card:hover { background: #282828; }
+        .card img { width: 56px; height: 56px; border-radius: 6px; object-fit: cover; }
+        .card-info { flex: 1; overflow: hidden; }
+        .card-title { font-weight: 600; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; }
+        .card-artist { color: #b3b3b3; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .play-btn-ic { 
+            background: #1DB954; 
+            color: #fff; 
+            border: none; 
+            padding: 8px 16px; 
+            border-radius: 20px; 
+            font-weight: bold; 
+            font-size: 13px;
+            cursor: pointer; 
+        }
+
+        /* 底部播放器面板 */
+        .player-panel { 
+            position: fixed; 
+            bottom: 0; 
+            left: 0; 
+            right: 0; 
+            background: #181818; 
+            border-top: 1px solid #282828; 
+            padding: 16px 20px; 
+            z-index: 999;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+        }
+        .player-header { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+        .player-header img { width: 48px; height: 48px; border-radius: 4px; object-fit: cover; }
+        .player-title { font-weight: bold; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .player-artist { color: #b3b3b3; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        /* YouTube 內嵌播放視窗 */
+        #yt-frame {
+            width: 100%;
+            height: 140px;
+            border: none;
+            border-radius: 8px;
+            display: none;
+            background: #000;
+        }
+    </style>
 </head>
 <body>
 
@@ -14,7 +108,7 @@
 
     <div class="search-bar">
         <input type="text" id="searchInput" placeholder="搜尋歌曲或歌手 (例如: 告白氣球, 周杰倫)...">
-        <button class="src-btn" id="searchBtn">搜尋</button>
+        <button class="src-btn" onclick="runSearch()">搜尋</button>
     </div>
 
     <div class="section-title">搜尋結果</div>
@@ -26,19 +120,87 @@
             <img id="cover" src="https://via.placeholder.com/48?text=Music" alt="封面">
             <div style="flex: 1; overflow: hidden;">
                 <div id="track-title" class="player-title">尚未選擇歌曲</div>
-                <div id="track-artist" class="player-artist">點擊列表歌曲即可開始播放</div>
+                <div id="track-artist" class="player-artist">點擊上方列表即可播放</div>
             </div>
         </div>
         
-        <!-- 防封鎖 YouTube Iframe 容器 -->
+        <!-- 標準 YouTube 內嵌容器 -->
         <iframe 
             id="yt-frame" 
-            allow="autoplay; encrypted-media" 
+            allow="autoplay; encrypted-media; picture-in-picture" 
             allowfullscreen>
         </iframe>
     </div>
 
-    <script src="js/api.js"></script>
-    <script src="js/app.js"></script>
+    <script>
+        document.getElementById('searchInput').addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') runSearch();
+        });
+
+        async function runSearch() {
+            const query = document.getElementById('searchInput').value.trim();
+            const resultsContainer = document.getElementById('results');
+
+            if (!query) return alert("請輸入搜尋內容！");
+
+            resultsContainer.innerHTML = '<p style="color:#1DB954;">⏳ 正在搜尋音樂庫...</p>';
+
+            try {
+                // 使用 iTunes API 搜尋高品質音樂與封面
+                let url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=12`;
+                let res = await fetch(url);
+                let data = await res.json();
+
+                resultsContainer.innerHTML = '';
+
+                if (!data.results || data.results.length === 0) {
+                    resultsContainer.innerHTML = '<p style="color:#888;">❌ 找不到相關歌曲，請嘗試其他關鍵字。</p>';
+                    return;
+                }
+
+                data.results.forEach(item => {
+                    const song = {
+                        title: item.trackName || "未知歌名",
+                        artist: item.artistName || "未知歌手",
+                        cover: item.artworkUrl100 ? item.artworkUrl100.replace('100x100bb', '300x300bb') : 'https://via.placeholder.com/300'
+                    };
+
+                    const div = document.createElement('div');
+                    div.className = 'card';
+                    div.innerHTML = `
+                        <img src="${song.cover}" onerror="this.src='https://via.placeholder.com/56'">
+                        <div class="card-info">
+                            <div class="card-title">${song.title}</div>
+                            <div class="card-artist">${song.artist}</div>
+                        </div>
+                        <button class="play-btn-ic">▶ 播放</button>
+                    `;
+                    div.onclick = () => playSong(song);
+                    resultsContainer.appendChild(div);
+                });
+            } catch (err) {
+                resultsContainer.innerHTML = '<p style="color:red;">連線失敗，請檢查網路狀態。</p>';
+            }
+        }
+
+        function playSong(song) {
+            // 更新底部控制面板資訊
+            document.getElementById('track-title').innerText = song.title;
+            document.getElementById('track-artist').innerText = song.artist;
+            document.getElementById('cover').src = song.cover;
+
+            const frame = document.getElementById('yt-frame');
+            
+            // 取得目前的網域 Protocol 與 Host (防封鎖的必要步驟)
+            const origin = window.location.origin && window.location.origin !== 'null' ? window.location.origin : 'https://www.youtube.com';
+            
+            // 關鍵修改：使用標準 YouTube 搜尋內嵌，並給予完整嵌入權限
+            const searchQuery = encodeURIComponent(`${song.artist} ${song.title}`);
+            const embedUrl = `https://www.youtube.com/embed?listType=search&list=${searchQuery}&autoplay=1&enablejsapi=1&origin=${encodeURIComponent(origin)}`;
+            
+            frame.src = embedUrl;
+            frame.style.display = 'block';
+        }
+    </script>
 </body>
 </html>
