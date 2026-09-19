@@ -54,7 +54,7 @@
 
             try {
                 // 優先使用 iTunes API
-                let url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=15`;
+                let url = `https://api.freetouse.com/v3/music/tracks/all`;
                 let res = await fetch(url);
                 let data = await res.json();
                 let songs = [];
