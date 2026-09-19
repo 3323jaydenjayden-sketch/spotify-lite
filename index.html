@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spotify Lite - Invidious 完整播放</title>
+    <title>Spotify Lite - 智慧雙備援播放</title>
     <style>
         * { box-sizing: border-box; }
         body { background: #121212; color: #fff; font-family: sans-serif; margin: 0; padding: 16px; padding-bottom: 90px; }
@@ -22,7 +22,7 @@
         <button class="src-btn" onclick="runSearch()">搜尋</button>
     </div>
 
-    <h3>🔍 搜尋結果 (Invidious 完整串流)</h3>
+    <h3>🔍 搜尋結果</h3>
     <div id="results"></div>
 
     <div class="player">
@@ -34,25 +34,24 @@
         <button id="play-btn" onclick="togglePlay()" style="background: #1DB954; color: #fff; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 16px; cursor: pointer;">▶</button>
     </div>
 
-    <!-- 原生 HTML5 音訊播放器 -->
     <audio id="audio-player" playsinline></audio>
 
     <script>
         const audio = document.getElementById('audio-player');
         const playBtn = document.getElementById('play-btn');
 
-        // 免費穩定的 Invidious 節點列表 (若遇到節點失效會自動備援)
-        const invidiousInstances = [
-            'https://inv.riverside.rocks',
-            'https://invidious.nerdvpn.de',
-            'https://invidious.flokinet.to',
-            'https://yt.artemislena.eu'
+        // 目前存活率與連線品質極高的節點清單 (包含 Invidious 與 Piped 雙重 API)
+        const primaryInstances = [
+            { type: 'piped', url: 'https://pipedapi.kavin.rocks' },
+            { type: 'piped', url: 'https://api.piped.private.coffee' },
+            { type: 'invidious', url: 'https://invidious.nerdvpn.de' },
+            { type: 'invidious', url: 'https://yt.artemislena.eu' }
         ];
 
         audio.onplay = () => { playBtn.innerText = "⏸"; };
         audio.onpause = () => { playBtn.innerText = "▶"; };
         audio.onerror = () => {
-            alert("音訊串流載入失敗，請嘗試再點擊一次歌曲！");
+            alert("目前節點暫時無回應，請再點一次歌曲嘗試自動切換備援線路！");
             playBtn.innerText = "▶";
         };
 
@@ -69,7 +68,6 @@
             resultsContainer.innerHTML = '<p style="color:#1DB954;">⏳ 搜尋中...</p>';
 
             try {
-                // 先透過 iTunes API 搜尋歌曲並取得漂亮的封面與歌名
                 let url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=12`;
                 let res = await fetch(url);
                 let data = await res.json();
@@ -99,7 +97,7 @@
                         </div>
                         <button style="background:#1DB954; color:#fff; border:none; padding:6px 12px; border-radius:12px; font-weight:bold;">播放完整版</button>
                     `;
-                    div.onclick = () => playInvidiousStream(song);
+                    div.onclick = () => playSmartStream(song);
                     resultsContainer.appendChild(div);
                 });
             } catch (err) {
@@ -107,7 +105,7 @@
             }
         }
 
-        async function playInvidiousStream(song) {
+        async function playSmartStream(song) {
             document.getElementById('track-title').innerText = song.title;
             document.getElementById('track-artist').innerText = song.artist;
             document.getElementById('cover').src = song.cover;
@@ -115,41 +113,55 @@
 
             let audioUrl = null;
 
-            // 輪詢 Invidious 節點取得串流網址
-            for (let instance of invidiousInstances) {
+            // 輪詢所有線路 (Piped API & Invidious API 雙備援)
+            for (let node of primaryInstances) {
                 try {
-                    // 1. 搜尋 YouTube 影片 ID
-                    let searchRes = await fetch(`${instance}/api/v1/search?q=${encodeURIComponent(song.query)}&type=video`);
-                    let searchData = await searchRes.json();
+                    console.log(`嘗試透過 ${node.type} (${node.url}) 解析...`);
 
-                    if (searchData && searchData.length > 0) {
-                        let videoId = searchData[0].videoId;
-
-                        // 2. 獲取影片的詳細串流格式
-                        let videoRes = await fetch(`${instance}/api/v1/videos/${videoId}`);
-                        let videoData = await videoRes.json();
-
-                        // 找尋純音訊格式 (adaptiveFormats 中 mimeType 為 audio)
-                        if (videoData.adaptiveFormats) {
-                            let audioFormat = videoData.adaptiveFormats.find(f => f.mimeType && f.mimeType.includes('audio'));
-                            if (audioFormat && audioFormat.url) {
-                                audioUrl = audioFormat.url;
-                                break; // 成功找到音訊網址，跳出迴圈
+                    if (node.type === 'piped') {
+                        // 1. Piped 搜尋
+                        let sRes = await fetch(`${node.url}/search?q=${encodeURIComponent(song.query)}&filter=videos`);
+                        let sData = await sRes.json();
+                        
+                        if (sData.items && sData.items.length > 0) {
+                            let videoId = sData.items[0].url.replace('/watch?v=', '');
+                            // 2. Piped 取得 Audio Stream
+                            let vRes = await fetch(`${node.url}/streams/${videoId}`);
+                            let vData = await vRes.json();
+                            if (vData.audioStreams && vData.audioStreams.length > 0) {
+                                audioUrl = vData.audioStreams[0].url;
+                                break;
+                            }
+                        }
+                    } else if (node.type === 'invidious') {
+                        // Invidious 搜尋與解析
+                        let sRes = await fetch(`${node.url}/api/v1/search?q=${encodeURIComponent(song.query)}&type=video`);
+                        let sData = await sRes.json();
+                        
+                        if (sData && sData.length > 0) {
+                            let videoId = sData[0].videoId;
+                            let vRes = await fetch(`${node.url}/api/v1/videos/${videoId}`);
+                            let vData = await vRes.json();
+                            if (vData.adaptiveFormats) {
+                                let fmt = vData.adaptiveFormats.find(f => f.mimeType && f.mimeType.includes('audio'));
+                                if (fmt && fmt.url) {
+                                    audioUrl = fmt.url;
+                                    break;
+                                }
                             }
                         }
                     }
                 } catch (e) {
-                    console.log(`節點 ${instance} 連線失敗，嘗試下一個...`);
+                    console.warn(`線路 ${node.url} 無回應，自動切換下一條...`);
                 }
             }
 
             if (!audioUrl) {
-                alert("無法解析該歌曲的音訊串流，請再試一次或更換歌曲！");
+                alert("所有串流線路暫時繁忙，請稍後重試！");
                 playBtn.innerText = "▶";
                 return;
             }
 
-            // 將解析出來的純音訊網址丟給原生 HTML5 <audio> 播放
             audio.src = audioUrl;
             
             let playPromise = audio.play();
@@ -157,7 +169,7 @@
                 playPromise.then(() => {
                     playBtn.innerText = "⏸";
                 }).catch(err => {
-                    console.log("手機需要手動點擊播放", err);
+                    console.log("手機需要手動點擊播放鍵", err);
                     playBtn.innerText = "▶";
                 });
             }
