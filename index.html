@@ -4,39 +4,122 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Spotify Lite</title>
-    <link rel="stylesheet" href="css/style.css">
+    <style>
+        * { box-sizing: border-box; }
+        body { background: #121212; color: #fff; font-family: sans-serif; margin: 0; padding: 16px; padding-bottom: 90px; }
+        .search-bar { display: flex; gap: 8px; margin-bottom: 20px; }
+        input { flex: 1; padding: 12px; border-radius: 20px; border: none; background: #242424; color: #fff; outline: none; font-size: 14px; }
+        button.src-btn { padding: 12px 20px; border-radius: 20px; border: none; background: #1DB954; color: #fff; font-weight: bold; cursor: pointer; }
+        .card { display: flex; align-items: center; gap: 12px; background: #282828; padding: 10px; margin-bottom: 8px; border-radius: 8px; cursor: pointer; }
+        .card:hover { background: #383838; }
+        .player { position: fixed; bottom: 0; left: 0; right: 0; background: #181818; padding: 12px; border-top: 1px solid #282828; display: flex; align-items: center; gap: 12px; }
+    </style>
 </head>
 <body>
 
-    <div class="header">
-        <h1>🎵 Spotify Lite</h1>
-    </div>
-
     <div class="search-bar">
-        <input type="text" id="searchInput" placeholder="搜尋歌曲或歌手 (例如: 告白氣球, 周杰倫)...">
-        <button class="src-btn" id="searchBtn">搜尋</button>
+        <input type="text" id="searchInput" placeholder="搜尋歌名 (例如: Sugar)...">
+        <button class="src-btn" id="searchBtn" onclick="runSearch()">搜尋</button>
     </div>
 
-    <div class="section-title">搜尋結果</div>
+    <h3>🔍 搜尋結果</h3>
     <div id="results"></div>
 
-    <!-- 底部音樂播放控制面板 -->
-    <div class="player-panel">
-        <div class="player-header">
-            <img id="cover" src="https://via.placeholder.com/48?text=Music" alt="封面">
-            <div class="player-info">
-                <div id="track-title" class="player-title">尚未選擇歌曲</div>
-                <div id="track-artist" class="player-artist">點擊列表歌曲即可開始播放</div>
-            </div>
+    <div class="player">
+        <img id="cover" src="https://via.placeholder.com/48" style="width: 48px; height: 48px; border-radius: 4px; object-fit: cover;">
+        <div style="flex: 1; overflow: hidden;">
+            <div id="track-title" style="font-weight: bold; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">未播放歌曲</div>
+            <div id="track-artist" style="color: #b3b3b3; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">--</div>
         </div>
-        
-        <!-- 播放器核心區塊 -->
-        <div class="player-controls">
-            <audio id="audio-player" controls style="width: 100%; margin-top: 8px;"></audio>
-        </div>
+        <button id="play-btn" onclick="togglePlay()" style="background: #1DB954; color: #fff; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 16px; cursor: pointer;">▶</button>
     </div>
 
-    <script src="js/api.js"></script>
-    <script src="js/app.js"></script>
+    <audio id="audio-element"></audio>
+
+    <script>
+        const audio = document.getElementById('audio-element');
+        const playBtn = document.getElementById('play-btn');
+
+        document.getElementById('searchInput').addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') runSearch();
+        });
+
+        async function runSearch() {
+            const query = document.getElementById('searchInput').value.trim();
+            const resultsContainer = document.getElementById('results');
+
+            if (!query) return alert("請輸入關鍵字！");
+
+            resultsContainer.innerHTML = '<p style="color:#1DB954;">⏳ 搜尋中，請稍候...</p>';
+
+            try {
+                // 優先使用 iTunes API
+                let url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=15`;
+                let res = await fetch(url);
+                let data = await res.json();
+                let songs = [];
+
+                if (data.results && data.results.length > 0) {
+                    songs = data.results.map(item => ({
+                        title: item.trackName || "未知歌名",
+                        artist: item.artistName || "未知歌手",
+                        cover: item.artworkUrl100 ? item.artworkUrl100.replace('100x100bb', '300x300bb') : 'https://via.placeholder.com/100',
+                        previewUrl: item.previewUrl
+                    }));
+                }
+
+                resultsContainer.innerHTML = '';
+
+                if (songs.length === 0) {
+                    resultsContainer.innerHTML = '<p style="color:#888;">❌ 查無結果，請換個關鍵字再試一次。</p>';
+                    return;
+                }
+
+                songs.forEach(song => {
+                    const div = document.createElement('div');
+                    div.className = 'card';
+                    div.innerHTML = `
+                        <img src="${song.cover}" style="width:48px; height:48px; border-radius:4px;" onerror="this.src='https://via.placeholder.com/48'">
+                        <div style="flex:1; overflow:hidden;">
+                            <div style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${song.title}</div>
+                            <div style="color:#b3b3b3; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${song.artist}</div>
+                        </div>
+                        <button style="background:#1DB954; color:#fff; border:none; padding:6px 12px; border-radius:12px; font-weight:bold;">播放</button>
+                    `;
+                    div.onclick = () => playSong(song);
+                    resultsContainer.appendChild(div);
+                });
+            } catch (err) {
+                resultsContainer.innerHTML = '<p style="color:red;">搜尋時發生錯誤，請檢查網路狀態。</p>';
+                console.error(err);
+            }
+        }
+
+        function playSong(song) {
+            document.getElementById('track-title').innerText = song.title;
+            document.getElementById('track-artist').innerText = song.artist;
+            document.getElementById('cover').src = song.cover;
+
+            if (!song.previewUrl) {
+                alert("這首歌暫時無法提供音訊串流！");
+                return;
+            }
+
+            audio.src = song.previewUrl;
+            audio.play();
+            playBtn.innerText = "⏸";
+        }
+
+        function togglePlay() {
+            if (!audio.src) return;
+            if (audio.paused) {
+                audio.play();
+                playBtn.innerText = "⏸";
+            } else {
+                audio.pause();
+                playBtn.innerText = "▶";
+            }
+        }
+    </script>
 </body>
 </html>
