@@ -13,8 +13,9 @@
         .card { display: flex; align-items: center; gap: 12px; background: #282828; padding: 10px; margin-bottom: 8px; border-radius: 8px; cursor: pointer; }
         .card:hover { background: #383838; }
         .player { position: fixed; bottom: 0; left: 0; right: 0; background: #181818; padding: 12px; border-top: 1px solid #282828; display: flex; align-items: center; gap: 12px; z-index: 999; }
-        /* 隱藏 YouTube 播放器視窗，只放背景聲音 */
-        #yt-player-container { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+        
+        /* 保持隱藏播放器，但在 DOM 中佔據 1px 確保手機瀏覽器允許渲染與播放 */
+        #yt-player-container { position: fixed; top: -9999px; left: -9999px; width: 1px; height: 1px; opacity: 0.01; }
     </style>
 </head>
 <body>
@@ -36,39 +37,11 @@
         <button id="play-btn" onclick="togglePlay()" style="background: #1DB954; color: #fff; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 16px; cursor: pointer;">▶</button>
     </div>
 
-    <!-- YouTube 隱藏播放容器 -->
     <div id="yt-player-container">
-        <div id="yt-player"></div>
+        <iframe id="yt-iframe" width="200" height="200" src="" frameborder="0" allow="autoplay"></iframe>
     </div>
 
-    <!-- 載入 YouTube IFrame API -->
-    <script src="https://www.youtube.com/iframe_api"></script>
-
     <script>
-        let ytPlayer = null;
-        let isPlayerReady = false;
-
-        // 初始化 YouTube API
-        function onYouTubeIframeAPIReady() {
-            ytPlayer = new YT.Player('yt-player', {
-                height: '1',
-                width: '1',
-                events: {
-                    'onReady': () => { isPlayerReady = true; },
-                    'onStateChange': onPlayerStateChange
-                }
-            });
-        }
-
-        function onPlayerStateChange(event) {
-            const playBtn = document.getElementById('play-btn');
-            if (event.data === YT.PlayerState.PLAYING) {
-                playBtn.innerText = "⏸";
-            } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
-                playBtn.innerText = "▶";
-            }
-        }
-
         document.getElementById('searchInput').addEventListener('keyup', (e) => {
             if (e.key === 'Enter') runSearch();
         });
@@ -79,7 +52,7 @@
 
             if (!query) return alert("請輸入關鍵字！");
 
-            resultsContainer.innerHTML = '<p style="color:#1DB954;">⏳ 搜尋完整歌曲中，請稍候...</p>';
+            resultsContainer.innerHTML = '<p style="color:#1DB954;">⏳ 搜尋中，請稍候...</p>';
 
             try {
                 let url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=15`;
@@ -112,13 +85,13 @@
                             <div style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${song.title}</div>
                             <div style="color:#b3b3b3; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${song.artist}</div>
                         </div>
-                        <button style="background:#1DB954; color:#fff; border:none; padding:6px 12px; border-radius:12px; font-weight:bold;">播放完整版</button>
+                        <button style="background:#1DB954; color:#fff; border:none; padding:6px 12px; border-radius:12px; font-weight:bold;">播放</button>
                     `;
                     div.onclick = () => playFullSong(song);
                     resultsContainer.appendChild(div);
                 });
             } catch (err) {
-                resultsContainer.innerHTML = '<p style="color:red;">搜尋發生錯誤，請檢查網路狀態。</p>';
+                resultsContainer.innerHTML = '<p style="color:red;">搜尋時發生錯誤，請檢查網路狀態。</p>';
                 console.error(err);
             }
         }
@@ -127,26 +100,30 @@
             document.getElementById('track-title').innerText = song.title;
             document.getElementById('track-artist').innerText = song.artist;
             document.getElementById('cover').src = song.cover;
+            document.getElementById('play-btn').innerText = "⏸";
 
-            if (!isPlayerReady || !ytPlayer) {
-                alert("播放器準備中，請稍後 2 秒再試！");
-                return;
-            }
-
-            // 使用 YouTube 搜尋載入完整音訊
-            ytPlayer.loadPlaylist({
-                listType: 'search',
-                list: song.searchTerm
-            });
+            const iframe = document.getElementById('yt-iframe');
+            // 使用 YouTube Embed 搜尋機制，並加上 autoplay=1 強制發聲
+            const searchUrl = `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(song.searchTerm)}&autoplay=1`;
+            iframe.src = searchUrl;
         }
 
         function togglePlay() {
-            if (!ytPlayer || !isPlayerReady) return;
-            const state = ytPlayer.getPlayerState();
-            if (state === YT.PlayerState.PLAYING) {
-                ytPlayer.pauseVideo();
+            const iframe = document.getElementById('yt-iframe');
+            const playBtn = document.getElementById('play-btn');
+
+            if (!iframe.src) return;
+
+            if (playBtn.innerText === "⏸") {
+                iframe.src = ""; // 停止播放
+                playBtn.innerText = "▶";
             } else {
-                ytPlayer.playVideo();
+                const title = document.getElementById('track-title').innerText;
+                const artist = document.getElementById('track-artist').innerText;
+                if (title !== "未播放歌曲") {
+                    iframe.src = `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(artist + " " + title)}&autoplay=1`;
+                    playBtn.innerText = "⏸";
+                }
             }
         }
     </script>
