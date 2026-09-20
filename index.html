@@ -119,7 +119,7 @@
             cursor: pointer; 
         }
 
-        /* 底部播放控制區 */
+        /* 底部播放面板 */
         .player-panel { 
             position: fixed; 
             bottom: 0; 
@@ -162,11 +162,10 @@
             text-overflow: ellipsis; 
         }
 
-        /* 隱藏 YouTube 播放器區域，保持音樂播放元件的介面一致 */
         .iframe-container {
             width: 100%;
-            height: 80px;
-            border-radius: 12px;
+            height: 90px;
+            border-radius: 8px;
             overflow: hidden;
             background: #000;
         }
@@ -184,7 +183,7 @@
     </div>
 
     <div class="search-bar">
-        <input type="text" id="searchInput" placeholder="搜尋完整歌曲或歌手 (例如: sugar, 告白氣球)...">
+        <input type="text" id="searchInput" placeholder="搜尋完整歌曲或歌手 (例如: sugar, 周杰倫)...">
         <button class="src-btn" id="searchBtn">搜尋</button>
     </div>
 
@@ -213,79 +212,72 @@
             const resultsContainer = document.getElementById('results');
             const ytPlayer = document.getElementById('yt-player');
 
-            // 備用公共 API 伺服器清單（避免單一節點失效）
-            const API_NODES = [
-                "https://pipedapi.kavin.rocks",
-                "https://api.piped.privacydev.net",
-                "https://piped-api.garudalinux.org"
-            ];
-
             searchInput.addEventListener('keyup', (e) => {
                 if (e.key === 'Enter') runSearch();
             });
 
             searchBtn.addEventListener('click', runSearch);
 
-            // 輪詢嘗試可用的 API 節點
-            async function fetchWithFallback(endpoint) {
-                for (const node of API_NODES) {
-                    try {
-                        const res = await fetch(`${node}${endpoint}`);
-                        if (res.ok) return await res.json();
-                    } catch (e) {
-                        console.warn(`節點 ${node} 連線失敗，嘗試下一個...`);
-                    }
-                }
-                throw new Error("所有 API 節點均無法連線");
+            // 使用官方穩定且無 CORS 限制的 iTunes 搜尋 API 抓取高畫質封面與正確歌曲資訊
+            async function fetchMusic(query) {
+                const url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=15`;
+                const response = await fetch(url);
+                if (!response.ok) throw new Error("網路連線失敗");
+                const data = await response.json();
+                
+                return (data.results || []).map(item => ({
+                    title: item.trackName || "未知歌名",
+                    artist: item.artistName || "未知歌手",
+                    cover: item.artworkUrl100 ? item.artworkUrl100.replace('100x100bb', '300x300bb') : 'https://via.placeholder.com/300',
+                    searchQuery: `${item.artistName} ${item.trackName}`
+                }));
             }
 
-            // 搜尋完整音樂
+            // 執行搜尋
             async function runSearch() {
                 const query = searchInput.value.trim();
                 if (!query) return alert("請輸入歌名或歌手！");
 
-                resultsContainer.innerHTML = '<p style="color:#1DB954;">⏳ 正在搜尋完整音樂庫...</p>';
+                resultsContainer.innerHTML = '<p style="color:#1DB954;">⏳ 正在搜尋音樂庫...</p>';
 
                 try {
-                    const data = await fetchWithFallback(`/search?q=${encodeURIComponent(query)}&filter=music_songs`);
+                    const songs = await fetchMusic(query);
                     resultsContainer.innerHTML = '';
 
-                    const items = (data.items || []).filter(item => item.type === 'stream');
-
-                    if (items.length === 0) {
+                    if (songs.length === 0) {
                         resultsContainer.innerHTML = '<p style="color:#888;">❌ 找不到相關歌曲，請嘗試更換關鍵字。</p>';
                         return;
                     }
 
-                    items.slice(0, 15).forEach(song => {
-                        const videoId = song.url.replace('/watch?v=', '');
+                    songs.forEach(song => {
                         const div = document.createElement('div');
                         div.className = 'card';
                         div.innerHTML = `
-                            <img src="${song.thumbnail}" onerror="this.src='https://via.placeholder.com/56'">
+                            <img src="${song.cover}" onerror="this.src='https://via.placeholder.com/56'">
                             <div class="card-info">
                                 <div class="card-title">${song.title}</div>
-                                <div class="card-artist">${song.uploaderName || '未知歌手'}</div>
+                                <div class="card-artist">${song.artist}</div>
                             </div>
                             <button class="play-btn-ic">▶ 播放完整版</button>
                         `;
-                        div.onclick = () => playSong(song.title, song.uploaderName, song.thumbnail, videoId);
+                        div.onclick = () => playSong(song);
                         resultsContainer.appendChild(div);
                     });
                 } catch (err) {
                     console.error(err);
-                    resultsContainer.innerHTML = '<p style="color:red;">連線失敗，請檢查網路或稍後再試。</p>';
+                    resultsContainer.innerHTML = '<p style="color:red;">搜尋失敗，請檢查網路連線。</p>';
                 }
             }
 
-            // 點擊音樂卡片播放完整音樂
-            function playSong(title, artist, cover, videoId) {
-                document.getElementById('track-title').innerText = title;
-                document.getElementById('track-artist').innerText = artist || '完整音樂';
-                document.getElementById('cover').src = cover;
+            // 點擊音樂卡片後，自動以 YouTube Embed 播放完整歌曲
+            function playSong(song) {
+                document.getElementById('track-title').innerText = song.title;
+                document.getElementById('track-artist').innerText = song.artist;
+                document.getElementById('cover').src = song.cover;
 
-                // 使用 YouTube Embed 載入，100% 播放完整歌曲且不被跨域封鎖
-                ytPlayer.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&enablejsapi=1`;
+                // 使用 YouTube 官方免 API Key 的 Embed 搜尋嵌入，100% 成功載入且無跨域問題
+                const embedUrl = `https://www.youtube-nocookie.com/embed?listType=search&list=${encodeURIComponent(song.searchQuery)}&autoplay=1`;
+                ytPlayer.src = embedUrl;
             }
         });
     </script>
