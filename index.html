@@ -1,1398 +1,289 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Music Lite</title>
-
-<style>
-
-* {
-    box-sizing: border-box;
-}
-
-body {
-    margin: 0;
-    padding: 16px;
-    padding-bottom: 120px;
-
-    background: #121212;
-    color: white;
-
-    font-family:
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        Arial,
-        sans-serif;
-}
-
-/* =========================
-   HEADER
-========================= */
-
-.header {
-    margin-bottom: 20px;
-}
-
-.header h1 {
-    margin: 0;
-    font-size: 24px;
-}
-
-.header p {
-    margin-top: 6px;
-    color: #999;
-    font-size: 13px;
-}
-
-/* =========================
-   SEARCH
-========================= */
-
-.search-bar {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 25px;
-}
-
-.search-bar input {
-    flex: 1;
-
-    min-width: 0;
-
-    padding: 13px 17px;
-
-    border: none;
-    outline: none;
-
-    border-radius: 25px;
-
-    background: #242424;
-    color: white;
-
-    font-size: 15px;
-}
-
-.search-bar input::placeholder {
-    color: #777;
-}
-
-.search-btn {
-    border: none;
-
-    padding: 0 20px;
-
-    border-radius: 25px;
-
-    background: #1DB954;
-    color: white;
-
-    font-weight: bold;
-
-    cursor: pointer;
-
-    transition: 0.15s;
-}
-
-.search-btn:hover {
-    background: #1ed760;
-}
-
-/* =========================
-   STATUS
-========================= */
-
-.status {
-    color: #999;
-
-    font-size: 14px;
-
-    margin: 15px 0;
-}
-
-/* =========================
-   SONG CARD
-========================= */
-
-.card {
-    display: flex;
-
-    align-items: center;
-
-    gap: 12px;
-
-    padding: 10px;
-
-    margin-bottom: 8px;
-
-    background: #282828;
-
-    border-radius: 9px;
-
-    cursor: pointer;
-
-    transition:
-        background 0.15s,
-        transform 0.1s;
-}
-
-.card:hover {
-    background: #383838;
-}
-
-.card:active {
-    transform: scale(0.99);
-}
-
-.cover {
-    width: 58px;
-    height: 58px;
-
-    flex-shrink: 0;
-
-    object-fit: cover;
-
-    border-radius: 6px;
-
-    background: #333;
-}
-
-.song-info {
-    flex: 1;
-
-    min-width: 0;
-}
-
-.song-title {
-    font-size: 15px;
-
-    font-weight: bold;
-
-    white-space: nowrap;
-
-    overflow: hidden;
-
-    text-overflow: ellipsis;
-}
-
-.song-artist {
-    color: #aaa;
-
-    font-size: 13px;
-
-    margin-top: 5px;
-
-    white-space: nowrap;
-
-    overflow: hidden;
-
-    text-overflow: ellipsis;
-}
-
-.song-duration {
-    color: #777;
-
-    font-size: 11px;
-
-    margin-top: 4px;
-}
-
-.small-play {
-    width: 40px;
-    height: 40px;
-
-    flex-shrink: 0;
-
-    border: none;
-
-    border-radius: 50%;
-
-    background: #1DB954;
-
-    color: white;
-
-    font-size: 15px;
-
-    cursor: pointer;
-}
-
-/* =========================
-   BOTTOM PLAYER
-========================= */
-
-.player {
-    position: fixed;
-
-    z-index: 100;
-
-    left: 0;
-    right: 0;
-    bottom: 0;
-
-    display: flex;
-
-    align-items: center;
-
-    gap: 12px;
-
-    padding: 10px 14px;
-
-    background: rgba(24,24,24,0.98);
-
-    border-top: 1px solid #333;
-
-    backdrop-filter: blur(10px);
-}
-
-.player-cover {
-    width: 52px;
-    height: 52px;
-
-    flex-shrink: 0;
-
-    object-fit: cover;
-
-    border-radius: 5px;
-
-    background: #333;
-}
-
-.player-info {
-    flex: 1;
-
-    min-width: 0;
-}
-
-.player-title {
-    font-size: 14px;
-
-    font-weight: bold;
-
-    white-space: nowrap;
-
-    overflow: hidden;
-
-    text-overflow: ellipsis;
-}
-
-.player-artist {
-    margin-top: 4px;
-
-    color: #aaa;
-
-    font-size: 12px;
-
-    white-space: nowrap;
-
-    overflow: hidden;
-
-    text-overflow: ellipsis;
-}
-
-/* =========================
-   CONTROLS
-========================= */
-
-.controls {
-    display: flex;
-
-    align-items: center;
-
-    gap: 5px;
-}
-
-.control-btn {
-    width: 38px;
-    height: 38px;
-
-    border: none;
-
-    background: transparent;
-
-    color: white;
-
-    font-size: 19px;
-
-    cursor: pointer;
-}
-
-.play-btn {
-    width: 42px;
-    height: 42px;
-
-    border: none;
-
-    border-radius: 50%;
-
-    background: #1DB954;
-
-    color: white;
-
-    font-size: 16px;
-
-    cursor: pointer;
-}
-
-/* =========================
-   PROGRESS
-========================= */
-
-.progress-container {
-    position: fixed;
-
-    z-index: 101;
-
-    left: 0;
-    right: 0;
-
-    bottom: 73px;
-
-    padding: 0 14px;
-
-    background: #181818;
-}
-
-#progress {
-    width: 100%;
-
-    height: 4px;
-
-    margin: 0;
-
-    accent-color: #1DB954;
-
-    cursor: pointer;
-}
-
-/* =========================
-   TIME
-========================= */
-
-.time-row {
-    position: fixed;
-
-    z-index: 102;
-
-    left: 14px;
-    right: 14px;
-
-    bottom: 77px;
-
-    display: flex;
-
-    justify-content: space-between;
-
-    pointer-events: none;
-
-    color: #777;
-
-    font-size: 9px;
-}
-
-/* =========================
-   MOBILE
-========================= */
-
-@media (max-width: 600px) {
-
-    body {
-        padding: 12px;
-        padding-bottom: 115px;
-    }
-
-    .header h1 {
-        font-size: 21px;
-    }
-
-    .player {
-        padding: 8px;
-    }
-
-    .player-cover {
-        width: 46px;
-        height: 46px;
-    }
-
-    .player-info {
-        max-width: 145px;
-    }
-
-    .control-btn {
-        width: 32px;
-    }
-
-}
-
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spotify Lite - 音樂播放器</title>
+    <style>
+        * { 
+            box-sizing: border-box; 
+            margin: 0; 
+            padding: 0; 
+        }
+
+        body { 
+            background: #121212; 
+            color: #fff; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            padding: 20px; 
+            padding-bottom: 220px; 
+        }
+
+        .header h1 { 
+            margin-bottom: 16px; 
+            font-size: 28px; 
+            color: #1DB954; 
+        }
+
+        .search-bar { 
+            display: flex; 
+            gap: 10px; 
+            margin-bottom: 24px; 
+        }
+
+        input { 
+            flex: 1; 
+            padding: 14px 18px; 
+            border-radius: 25px; 
+            border: 1px solid #333; 
+            background: #242424; 
+            color: #fff; 
+            outline: none; 
+            font-size: 15px; 
+        }
+        input:focus { 
+            border-color: #1DB954; 
+        }
+
+        button.src-btn { 
+            padding: 14px 24px; 
+            border-radius: 25px; 
+            border: none; 
+            background: #1DB954; 
+            color: #fff; 
+            font-weight: bold; 
+            font-size: 15px;
+            cursor: pointer; 
+            transition: 0.2s;
+        }
+        button.src-btn:hover { 
+            background: #1ed760; 
+            transform: scale(1.02);
+        }
+
+        .section-title { 
+            font-size: 18px; 
+            font-weight: bold; 
+            margin-bottom: 16px; 
+            color: #b3b3b3; 
+        }
+
+        .card { 
+            display: flex; 
+            align-items: center; 
+            gap: 16px; 
+            background: #181818; 
+            padding: 12px 16px; 
+            margin-bottom: 10px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            transition: background 0.2s;
+        }
+        .card:hover { 
+            background: #282828; 
+        }
+        .card img { 
+            width: 56px; 
+            height: 56px; 
+            border-radius: 6px; 
+            object-fit: cover; 
+        }
+        .card-info { 
+            flex: 1; 
+            overflow: hidden; 
+        }
+        .card-title { 
+            font-weight: 600; 
+            font-size: 16px; 
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+            margin-bottom: 4px; 
+        }
+        .card-artist { 
+            color: #b3b3b3; 
+            font-size: 13px; 
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+        }
+
+        .play-btn-ic { 
+            background: #1DB954; 
+            color: #fff; 
+            border: none; 
+            padding: 8px 16px; 
+            border-radius: 20px; 
+            font-weight: bold; 
+            font-size: 13px;
+            cursor: pointer; 
+        }
+
+        /* 底部音樂播放器控制面板 */
+        .player-panel { 
+            position: fixed; 
+            bottom: 0; 
+            left: 0; 
+            right: 0; 
+            background: #181818; 
+            border-top: 1px solid #282828; 
+            padding: 16px 20px; 
+            z-index: 999;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+        }
+        .player-header { 
+            display: flex; 
+            align-items: center; 
+            gap: 14px; 
+            margin-bottom: 12px;
+        }
+        .player-header img { 
+            width: 48px; 
+            height: 48px; 
+            border-radius: 4px; 
+            object-fit: cover; 
+        }
+        .player-info { 
+            flex: 1; 
+            overflow: hidden; 
+        }
+        .player-title { 
+            font-weight: bold; 
+            font-size: 15px; 
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+        }
+        .player-artist { 
+            color: #b3b3b3; 
+            font-size: 13px; 
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+        }
+
+        /* 原生音訊播放器控制項 */
+        #audio-player {
+            width: 100%;
+            height: 40px;
+            outline: none;
+            border-radius: 20px;
+        }
+    </style>
 </head>
-
-
 <body>
 
-<!-- =========================
-     HEADER
-========================= -->
-
-<div class="header">
-
-    <h1>🎵 Music Lite</h1>
-
-    <p>
-        免費音樂播放器
-    </p>
-
-</div>
-
-
-<!-- =========================
-     SEARCH
-========================= -->
-
-<div class="search-bar">
-
-    <input
-        id="searchInput"
-        type="text"
-        placeholder="搜尋歌曲，例如：piano、cinematic..."
-        autocomplete="off"
-    >
-
-    <button
-        id="searchBtn"
-        class="search-btn"
-        onclick="searchMusic()"
-    >
-        搜尋
-    </button>
-
-</div>
-
-
-<!-- =========================
-     RESULTS
-========================= -->
-
-<h3>
-    🔍 搜尋結果
-</h3>
-
-<div id="results">
-
-    <p class="status">
-        輸入關鍵字開始搜尋
-    </p>
-
-</div>
-
-
-<!-- =========================
-     PROGRESS
-========================= -->
-
-<div class="progress-container">
-
-    <input
-        id="progress"
-        type="range"
-        min="0"
-        max="100"
-        value="0"
-    >
-
-</div>
-
-
-<!-- =========================
-     PLAYER
-========================= -->
-
-<div class="player">
-
-    <img
-        id="playerCover"
-        class="player-cover"
-        src="https://via.placeholder.com/100"
-        alt="cover"
-    >
-
-    <div class="player-info">
-
-        <div
-            id="playerTitle"
-            class="player-title"
-        >
-            尚未播放歌曲
-        </div>
-
-        <div
-            id="playerArtist"
-            class="player-artist"
-        >
-            --
-        </div>
-
+    <div class="header">
+        <h1>🎵 Spotify Lite</h1>
     </div>
 
-
-    <div class="controls">
-
-        <button
-            class="control-btn"
-            onclick="previousSong()"
-            title="上一首"
-        >
-            ⏮
-        </button>
-
-        <button
-            id="playButton"
-            class="play-btn"
-            onclick="togglePlay()"
-            title="播放"
-        >
-            ▶
-        </button>
-
-        <button
-            class="control-btn"
-            onclick="nextSong()"
-            title="下一首"
-        >
-            ⏭
-        </button>
-
+    <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="搜尋歌曲或歌手 (例如: 告白氣球, 周杰倫)...">
+        <button class="src-btn" id="searchBtn">搜尋</button>
     </div>
 
-</div>
-
-
-<!-- AUDIO -->
-
-<audio
-    id="audio"
-    preload="metadata"
-></audio>
-
-
-<script>
-
-/* ==================================================
-   API
-================================================== */
-
-const API_URL =
-    "https://api.freetouse.com/v3/music/tracks/search";
-
-
-/* ==================================================
-   DOM
-================================================== */
-
-const audio =
-    document.getElementById("audio");
-
-const results =
-    document.getElementById("results");
-
-const searchInput =
-    document.getElementById("searchInput");
-
-const searchBtn =
-    document.getElementById("searchBtn");
-
-const playButton =
-    document.getElementById("playButton");
-
-const progress =
-    document.getElementById("progress");
-
-const playerTitle =
-    document.getElementById("playerTitle");
-
-const playerArtist =
-    document.getElementById("playerArtist");
-
-const playerCover =
-    document.getElementById("playerCover");
-
-
-/* ==================================================
-   STATE
-================================================== */
-
-let songs = [];
-
-let currentIndex = -1;
-
-
-/* ==================================================
-   ENTER 搜尋
-================================================== */
-
-searchInput.addEventListener(
-    "keydown",
-    function(event) {
-
-        if (event.key === "Enter") {
-
-            searchMusic();
-
-        }
-
-    }
-);
-
-
-/* ==================================================
-   SEARCH
-================================================== */
-
-async function searchMusic() {
-
-    const query =
-        searchInput.value.trim();
-
-
-    if (!query) {
-
-        alert("請輸入歌曲名稱");
-
-        return;
-
-    }
-
-
-    results.innerHTML = `
-        <p class="status">
-            ⏳ 搜尋「${escapeHTML(query)}」中...
-        </p>
-    `;
-
-
-    searchBtn.disabled = true;
-
-    searchBtn.textContent = "搜尋中";
-
-
-    try {
-
-        const url =
-            API_URL +
-            "?query=" +
-            encodeURIComponent(query) +
-            "&limit=50";
-
-
-        console.log(
-            "API URL:",
-            url
-        );
-
-
-        const response =
-            await fetch(url);
-
-
-        if (!response.ok) {
-
-            throw new Error(
-                "HTTP " + response.status
-            );
-
-        }
-
-
-        const json =
-            await response.json();
-
-
-        console.log(
-            "API Response:",
-            json
-        );
-
-
-        /*
-         * 你的 JSON 結構：
-         *
-         * {
-         *   ok: true,
-         *   data: [...]
-         * }
-         */
-
-        if (
-            !json ||
-            !Array.isArray(json.data)
-        ) {
-
-            throw new Error(
-                "API 回傳格式錯誤"
-            );
-
-        }
-
-
-        songs =
-            json.data
-            .map(formatSong)
-            .filter(
-                song => song.audio
-            );
-
-
-        renderSongs();
-
-
-    } catch (error) {
-
-        console.error(
-            "Search error:",
-            error
-        );
-
-
-        results.innerHTML = `
-
-            <p
-                style="
-                    color:#ff5555;
-                    font-weight:bold;
-                "
-            >
-                ❌ Load failed
-            </p>
-
-            <p
-                style="
-                    color:#888;
-                    font-size:13px;
-                "
-            >
-                ${escapeHTML(error.message)}
-            </p>
-
-        `;
-
-    }
-
-
-    searchBtn.disabled = false;
-
-    searchBtn.textContent = "搜尋";
-
-}
-
-
-/* ==================================================
-   FORMAT API SONG
-================================================== */
-
-function formatSong(track) {
-
-    /*
-     * 你的 API JSON：
-     *
-     * title
-     *
-     * artists:
-     * [
-     *   [
-     *     0,
-     *     {
-     *       name: "Johny Grimes"
-     *     }
-     *   ]
-     * ]
-     *
-     * thumbnails.md
-     *
-     * files.mp3
-     */
-
-
-    let artist =
-        "未知藝術家";
-
-
-    if (
-        Array.isArray(track.artists) &&
-        track.artists.length > 0
-    ) {
-
-        const artistData =
-            track.artists[0][1];
-
-
-        if (
-            artistData &&
-            artistData.name
-        ) {
-
-            artist =
-                artistData.name;
-
-        }
-
-    }
-
-
-    return {
-
-        id:
-            track.id,
-
-        title:
-            track.title ||
-            "未知歌曲",
-
-        artist:
-            artist,
-
-        cover:
-            track.thumbnails?.md ||
-            track.thumbnails?.lg ||
-            "https://via.placeholder.com/300",
-
-        audio:
-            track.files?.mp3 ||
-            "",
-
-        duration:
-            Number(track.duration) || 0
-
-    };
-
-}
-
-
-/* ==================================================
-   RENDER SONGS
-================================================== */
-
-function renderSongs() {
-
-    results.innerHTML = "";
-
-
-    if (songs.length === 0) {
-
-        results.innerHTML = `
-
-            <p class="status">
-                ❌ 找不到可播放歌曲
-            </p>
-
-        `;
-
-        return;
-
-    }
-
-
-    songs.forEach(
-        function(song, index) {
-
-            const card =
-                document.createElement("div");
-
-
-            card.className =
-                "card";
-
-
-            const duration =
-                formatTime(
-                    song.duration
-                );
-
-
-            card.innerHTML = `
-
-                <img
-                    class="cover"
-                    src="${escapeAttribute(song.cover)}"
-                    alt="cover"
-                    onerror="
-                        this.src='https://via.placeholder.com/100'
-                    "
-                >
-
-
-                <div class="song-info">
-
-                    <div class="song-title">
-                        ${escapeHTML(song.title)}
-                    </div>
-
-                    <div class="song-artist">
-                        ${escapeHTML(song.artist)}
-                    </div>
-
-                    <div class="song-duration">
-                        ${duration}
-                    </div>
-
-                </div>
-
-
-                <button
-                    class="small-play"
-                    type="button"
-                >
-                    ▶
-                </button>
-
-            `;
-
-
-            card.addEventListener(
-                "click",
-                function() {
-
-                    playSong(index);
-
+    <div class="section-title">搜尋結果</div>
+    <div id="results"></div>
+
+    <!-- 底部音樂播放控制面板 -->
+    <div class="player-panel">
+        <div class="player-header">
+            <img id="cover" src="https://via.placeholder.com/48?text=Music" alt="封面">
+            <div class="player-info">
+                <div id="track-title" class="player-title">尚未選擇歌曲</div>
+                <div id="track-artist" class="player-artist">點擊列表歌曲即可開始播放</div>
+            </div>
+        </div>
+        
+        <!-- 音樂播放核心區塊 -->
+        <div class="player-controls">
+            <audio id="audio-player" controls></audio>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchInput = document.getElementById('searchInput');
+            const searchBtn = document.getElementById('searchBtn');
+            const resultsContainer = document.getElementById('results');
+            const audioPlayer = document.getElementById('audio-player');
+
+            // 監聽 Enter 鍵與點擊事件
+            searchInput.addEventListener('keyup', (e) => {
+                if (e.key === 'Enter') runSearch();
+            });
+
+            searchBtn.addEventListener('click', runSearch);
+
+            // 搜尋音樂 API (使用 iTunes API 取得音樂資料與聲音檔串流，完全避免跨域阻擋問題)
+            async function fetchMusicData(query) {
+                const url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=15`;
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error("API 請求失敗");
                 }
-            );
-
-
-            results.appendChild(card);
-
-        }
-    );
-
-}
-
-
-/* ==================================================
-   PLAY SONG
-================================================== */
-
-function playSong(index) {
-
-    if (
-        index < 0 ||
-        index >= songs.length
-    ) {
-
-        return;
-
-    }
-
-
-    const song =
-        songs[index];
-
-
-    currentIndex =
-        index;
-
-
-    console.log(
-        "Playing:",
-        song
-    );
-
-
-    /*
-     * 更新 Player
-     */
-
-    playerTitle.textContent =
-        song.title;
-
-
-    playerArtist.textContent =
-        song.artist;
-
-
-    playerCover.src =
-        song.cover;
-
-
-    /*
-     * 使用真正 MP3
-     *
-     * files.mp3
-     */
-
-    if (!song.audio) {
-
-        alert(
-            "這首歌曲沒有 MP3 音訊"
-        );
-
-        return;
-
-    }
-
-
-    /*
-     * 停止目前歌曲
-     */
-
-    audio.pause();
-
-
-    /*
-     * 載入完整 MP3
-     */
-
-    audio.src =
-        song.audio;
-
-
-    audio.load();
-
-
-    /*
-     * 播放
-     */
-
-    audio.play()
-    .then(
-        function() {
-
-            playButton.textContent =
-                "⏸";
-
-        }
-    )
-    .catch(
-        function(error) {
-
-            console.error(
-                "Playback error:",
-                error
-            );
-
-
-            alert(
-                "播放失敗，請再點一次播放"
-            );
-
-        }
-    );
-
-}
-
-
-/* ==================================================
-   PLAY / PAUSE
-================================================== */
-
-function togglePlay() {
-
-    /*
-     * 尚未選歌曲
-     */
-
-    if (!audio.src) {
-
-        if (songs.length > 0) {
-
-            playSong(0);
-
-        }
-
-        return;
-
-    }
-
-
-    if (audio.paused) {
-
-        audio.play()
-        .then(
-            function() {
-
-                playButton.textContent =
-                    "⏸";
-
+                const data = await response.json();
+                
+                return (data.results || []).map(item => ({
+                    title: item.trackName || "未知歌名",
+                    artist: item.artistName || "未知歌手",
+                    cover: item.artworkUrl100 ? item.artworkUrl100.replace('100x100bb', '300x300bb') : 'https://via.placeholder.com/300',
+                    audioUrl: item.previewUrl
+                }));
             }
-        )
-        .catch(
-            function(error) {
 
-                console.error(error);
+            // 執行搜尋邏輯
+            async function runSearch() {
+                const query = searchInput.value.trim();
+                if (!query) return alert("請輸入歌名或歌手！");
 
+                resultsContainer.innerHTML = '<p style="color:#1DB954;">⏳ 正在搜尋音樂庫...</p>';
+
+                try {
+                    const songs = await fetchMusicData(query);
+                    resultsContainer.innerHTML = '';
+
+                    if (songs.length === 0) {
+                        resultsContainer.innerHTML = '<p style="color:#888;">❌ 找不到相關歌曲，請嘗試更換關鍵字。</p>';
+                        return;
+                    }
+
+                    songs.forEach(song => {
+                        const div = document.createElement('div');
+                        div.className = 'card';
+                        div.innerHTML = `
+                            <img src="${song.cover}" onerror="this.src='https://via.placeholder.com/56'">
+                            <div class="card-info">
+                                <div class="card-title">${song.title}</div>
+                                <div class="card-artist">${song.artist}</div>
+                            </div>
+                            <button class="play-btn-ic">▶ 播放</button>
+                        `;
+                        div.onclick = () => playSong(song);
+                        resultsContainer.appendChild(div);
+                    });
+                } catch (err) {
+                    resultsContainer.innerHTML = '<p style="color:red;">搜尋連線失敗，請檢查網路狀態。</p>';
+                }
             }
-        );
 
-    } else {
-
-        audio.pause();
-
-        playButton.textContent =
-            "▶";
-
-    }
-
-}
-
-
-/* ==================================================
-   NEXT
-================================================== */
-
-function nextSong() {
-
-    if (songs.length === 0) {
-
-        return;
-
-    }
-
-
-    let next =
-        currentIndex + 1;
-
-
-    if (
-        next >= songs.length
-    ) {
-
-        next = 0;
-
-    }
-
-
-    playSong(next);
-
-}
-
-
-/* ==================================================
-   PREVIOUS
-================================================== */
-
-function previousSong() {
-
-    if (songs.length === 0) {
-
-        return;
-
-    }
-
-
-    let previous =
-        currentIndex - 1;
-
-
-    if (previous < 0) {
-
-        previous =
-            songs.length - 1;
-
-    }
-
-
-    playSong(previous);
-
-}
-
-
-/* ==================================================
-   AUTO NEXT
-================================================== */
-
-audio.addEventListener(
-    "ended",
-    function() {
-
-        nextSong();
-
-    }
-);
-
-
-/* ==================================================
-   AUDIO ERROR
-================================================== */
-
-audio.addEventListener(
-    "error",
-    function() {
-
-        console.error(
-            "Audio error:",
-            audio.error
-        );
-
-    }
-);
-
-
-/* ==================================================
-   PROGRESS
-================================================== */
-
-audio.addEventListener(
-    "timeupdate",
-    function() {
-
-        if (
-            !audio.duration ||
-            !isFinite(audio.duration)
-        ) {
-
-            return;
-
-        }
-
-
-        const percent =
-            (
-                audio.currentTime /
-                audio.duration
-            ) * 100;
-
-
-        progress.value =
-            percent;
-
-    }
-);
-
-
-/* ==================================================
-   SEEK
-================================================== */
-
-progress.addEventListener(
-    "input",
-    function() {
-
-        if (
-            !audio.duration ||
-            !isFinite(audio.duration)
-        ) {
-
-            return;
-
-        }
-
-
-        audio.currentTime =
-            (
-                Number(progress.value) /
-                100
-            ) * audio.duration;
-
-    }
-);
-
-
-/* ==================================================
-   PLAY STATE
-================================================== */
-
-audio.addEventListener(
-    "play",
-    function() {
-
-        playButton.textContent =
-            "⏸";
-
-    }
-);
-
-
-audio.addEventListener(
-    "pause",
-    function() {
-
-        playButton.textContent =
-            "▶";
-
-    }
-);
-
-
-/* ==================================================
-   TIME FORMAT
-================================================== */
-
-function formatTime(seconds) {
-
-    if (
-        !seconds ||
-        !isFinite(seconds)
-    ) {
-
-        return "0:00";
-
-    }
-
-
-    const minutes =
-        Math.floor(
-            seconds / 60
-        );
-
-
-    const secs =
-        Math.floor(
-            seconds % 60
-        )
-        .toString()
-        .padStart(2, "0");
-
-
-    return (
-        minutes +
-        ":" +
-        secs
-    );
-
-}
-
-
-/* ==================================================
-   SECURITY
-================================================== */
-
-function escapeHTML(value) {
-
-    return String(value)
-
-        .replaceAll(
-            "&",
-            "&amp;"
-        )
-
-        .replaceAll(
-            "<",
-            "&lt;"
-        )
-
-        .replaceAll(
-            ">",
-            "&gt;"
-        )
-
-        .replaceAll(
-            '"',
-            "&quot;"
-        )
-
-        .replaceAll(
-            "'",
-            "&#039;"
-        );
-
-}
-
-
-function escapeAttribute(value) {
-
-    return escapeHTML(value);
-
-}
-
-</script>
-
+            // 點擊音樂卡片觸發播放
+            function playSong(song) {
+                document.getElementById('track-title').innerText = song.title;
+                document.getElementById('track-artist').innerText = song.artist;
+                document.getElementById('cover').src = song.cover;
+
+                // 換載聲音網址並自動播放
+                if (song.audioUrl) {
+                    audioPlayer.src = song.audioUrl;
+                    audioPlayer.play().catch(e => {
+                        console.log("自動播放被瀏覽器安全政策攔截，請手動點擊播放按鈕。");
+                    });
+                } else {
+                    alert("此歌曲暫無可播放的音訊資源");
+                }
+            }
+        });
+    </script>
 </body>
 </html>
