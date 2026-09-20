@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spotify Lite - 音樂播放器</title>
+    <title>Spotify Lite - 完整音樂播放器</title>
     <style>
         * { 
             box-sizing: border-box; 
@@ -162,7 +162,6 @@
             text-overflow: ellipsis; 
         }
 
-        /* 原生音訊播放器控制項 */
         #audio-player {
             width: 100%;
             height: 40px;
@@ -174,11 +173,11 @@
 <body>
 
     <div class="header">
-        <h1>🎵 Spotify Lite</h1>
+        <h1>🎵 Spotify Lite (完整版)</h1>
     </div>
 
     <div class="search-bar">
-        <input type="text" id="searchInput" placeholder="搜尋歌曲或歌手 (例如: 告白氣球, 周杰倫)...">
+        <input type="text" id="searchInput" placeholder="搜尋完整歌曲或歌手 (例如: 告白氣球, 周杰倫)...">
         <button class="src-btn" id="searchBtn">搜尋</button>
     </div>
 
@@ -191,11 +190,10 @@
             <img id="cover" src="https://via.placeholder.com/48?text=Music" alt="封面">
             <div class="player-info">
                 <div id="track-title" class="player-title">尚未選擇歌曲</div>
-                <div id="track-artist" class="player-artist">點擊列表歌曲即可開始播放</div>
+                <div id="track-artist" class="player-artist">點擊列表歌曲即可開始播放完整版</div>
             </div>
         </div>
         
-        <!-- 音樂播放核心區塊 -->
         <div class="player-controls">
             <audio id="audio-player" controls></audio>
         </div>
@@ -208,39 +206,57 @@
             const resultsContainer = document.getElementById('results');
             const audioPlayer = document.getElementById('audio-player');
 
-            // 監聽 Enter 鍵與點擊事件
+            // API 伺服器節點（當前使用 Invidious 公共節點）
+            const API_BASE = "https://inv.nadeko.net/api/v1";
+
             searchInput.addEventListener('keyup', (e) => {
                 if (e.key === 'Enter') runSearch();
             });
 
             searchBtn.addEventListener('click', runSearch);
 
-            // 搜尋音樂 API (使用 iTunes API 取得音樂資料與聲音檔串流，完全避免跨域阻擋問題)
-            async function fetchMusicData(query) {
-                const url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=15`;
+            // 搜尋完整歌曲資料
+            async function fetchFullMusic(query) {
+                const url = `${API_BASE}/search?q=${encodeURIComponent(query)}&type=video`;
                 const response = await fetch(url);
-                if (!response.ok) {
-                    throw new Error("API 請求失敗");
-                }
+                if (!response.ok) throw new Error("API 請求失敗");
+                
                 const data = await response.json();
                 
-                return (data.results || []).map(item => ({
-                    title: item.trackName || "未知歌名",
-                    artist: item.artistName || "未知歌手",
-                    cover: item.artworkUrl100 ? item.artworkUrl100.replace('100x100bb', '300x300bb') : 'https://via.placeholder.com/300',
-                    audioUrl: item.previewUrl
+                return (data || []).slice(0, 15).map(item => ({
+                    videoId: item.videoId,
+                    title: item.title,
+                    artist: item.author,
+                    cover: item.videoThumbnails && item.videoThumbnails.length > 0 
+                           ? item.videoThumbnails[item.videoThumbnails.length - 1].url 
+                           : 'https://via.placeholder.com/300'
                 }));
             }
 
-            // 執行搜尋邏輯
+            // 取得音訊串流網址
+            async function getAudioUrl(videoId) {
+                const url = `${API_BASE}/videos/${videoId}`;
+                const response = await fetch(url);
+                if (!response.ok) throw new Error("音訊讀取失敗");
+                
+                const data = await response.json();
+                // 優先選擇品質較高的純音訊格式
+                const audioFormats = (data.adaptiveFormats || []).filter(f => f.type && f.type.startsWith('audio/'));
+                if (audioFormats.length > 0) {
+                    return audioFormats[0].url;
+                }
+                throw new Error("無可用音訊串流");
+            }
+
+            // 執行搜尋
             async function runSearch() {
                 const query = searchInput.value.trim();
                 if (!query) return alert("請輸入歌名或歌手！");
 
-                resultsContainer.innerHTML = '<p style="color:#1DB954;">⏳ 正在搜尋音樂庫...</p>';
+                resultsContainer.innerHTML = '<p style="color:#1DB954;">⏳ 正在搜尋完整音樂庫...</p>';
 
                 try {
-                    const songs = await fetchMusicData(query);
+                    const songs = await fetchFullMusic(query);
                     resultsContainer.innerHTML = '';
 
                     if (songs.length === 0) {
@@ -257,30 +273,35 @@
                                 <div class="card-title">${song.title}</div>
                                 <div class="card-artist">${song.artist}</div>
                             </div>
-                            <button class="play-btn-ic">▶ 播放</button>
+                            <button class="play-btn-ic">▶ 播放完整版</button>
                         `;
                         div.onclick = () => playSong(song);
                         resultsContainer.appendChild(div);
                     });
                 } catch (err) {
-                    resultsContainer.innerHTML = '<p style="color:red;">搜尋連線失敗，請檢查網路狀態。</p>';
+                    console.error(err);
+                    resultsContainer.innerHTML = '<p style="color:red;">搜尋失敗或 API 節點繁忙，請稍後再試。</p>';
                 }
             }
 
-            // 點擊音樂卡片觸發播放
-            function playSong(song) {
+            // 點擊音樂卡片播放完整音樂
+            async function playSong(song) {
                 document.getElementById('track-title').innerText = song.title;
                 document.getElementById('track-artist').innerText = song.artist;
                 document.getElementById('cover').src = song.cover;
 
-                // 換載聲音網址並自動播放
-                if (song.audioUrl) {
-                    audioPlayer.src = song.audioUrl;
+                try {
+                    document.getElementById('track-artist').innerText = "⏳ 正在載入完整音訊串流...";
+                    const audioUrl = await getAudioUrl(song.videoId);
+                    document.getElementById('track-artist').innerText = song.artist;
+
+                    audioPlayer.src = audioUrl;
                     audioPlayer.play().catch(e => {
-                        console.log("自動播放被瀏覽器安全政策攔截，請手動點擊播放按鈕。");
+                        console.log("自動播放被瀏覽器攔截，請手動點擊播放按鈕。");
                     });
-                } else {
-                    alert("此歌曲暫無可播放的音訊資源");
+                } catch (err) {
+                    alert("取得完整音樂檔失敗，請更換其他搜尋結果。");
+                    document.getElementById('track-artist').innerText = song.artist;
                 }
             }
         });
