@@ -3,286 +3,101 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spotify Lite - 完整版</title>
+    <title>Spotify Lite - 終極完整版</title>
     <style>
-        * { 
-            box-sizing: border-box; 
-            margin: 0; 
-            padding: 0; 
-        }
-
-        body { 
-            background: #121212; 
-            color: #fff; 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-            padding: 20px; 
-            padding-bottom: 160px; 
-        }
-
-        .header h1 { 
-            margin-bottom: 16px; 
-            font-size: 28px; 
-            color: #1DB954; 
-        }
-
-        .search-bar { 
-            display: flex; 
-            gap: 10px; 
-            margin-bottom: 24px; 
-        }
-
-        input { 
-            flex: 1; 
-            padding: 14px 18px; 
-            border-radius: 25px; 
-            border: 1px solid #333; 
-            background: #242424; 
-            color: #fff; 
-            outline: none; 
-            font-size: 15px; 
-        }
-        input:focus { 
-            border-color: #1DB954; 
-        }
-
-        button.src-btn { 
-            padding: 14px 24px; 
-            border-radius: 25px; 
-            border: none; 
-            background: #1DB954; 
-            color: #fff; 
-            font-weight: bold; 
-            font-size: 15px;
-            cursor: pointer; 
-            transition: 0.2s;
-        }
-        button.src-btn:hover { 
-            background: #1ed760; 
-            transform: scale(1.02);
-        }
-
-        .section-title { 
-            font-size: 18px; 
-            font-weight: bold; 
-            margin-bottom: 16px; 
-            color: #b3b3b3; 
-        }
-
-        .card { 
-            display: flex; 
-            align-items: center; 
-            gap: 16px; 
-            background: #181818; 
-            padding: 12px 16px; 
-            margin-bottom: 10px; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            transition: background 0.2s;
-        }
-        .card:hover { 
-            background: #282828; 
-        }
-        .card img { 
-            width: 56px; 
-            height: 56px; 
-            border-radius: 6px; 
-            object-fit: cover; 
-        }
-        .card-info { 
-            flex: 1; 
-            overflow: hidden; 
-        }
-        .card-title { 
-            font-weight: 600; 
-            font-size: 16px; 
-            white-space: nowrap; 
-            overflow: hidden; 
-            text-overflow: ellipsis; 
-            margin-bottom: 4px; 
-        }
-        .card-artist { 
-            color: #b3b3b3; 
-            font-size: 13px; 
-            white-space: nowrap; 
-            overflow: hidden; 
-            text-overflow: ellipsis; 
-        }
-
-        .play-btn-ic { 
-            background: #1DB954; 
-            color: #fff; 
-            border: none; 
-            padding: 8px 16px; 
-            border-radius: 20px; 
-            font-weight: bold; 
-            font-size: 13px;
-            cursor: pointer; 
-        }
-
-        /* 底部播放控制面板 */
-        .player-panel { 
-            position: fixed; 
-            bottom: 0; 
-            left: 0; 
-            right: 0; 
-            background: #181818; 
-            border-top: 1px solid #282828; 
-            padding: 16px 20px; 
-            z-index: 999;
-            box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .player-left {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            min-width: 200px;
-            max-width: 300px;
-        }
-
-        .player-left img {
-            width: 50px;
-            height: 50px;
-            border-radius: 6px;
-            object-fit: cover;
-        }
-
-        .player-info {
-            overflow: hidden;
-        }
-
-        .player-title {
-            font-size: 14px;
-            font-weight: bold;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .player-artist {
-            font-size: 12px;
-            color: #b3b3b3;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        audio {
-            flex: 1;
-            height: 40px;
-            outline: none;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #121212; color: #fff; font-family: sans-serif; padding: 20px; padding-bottom: 160px; }
+        h1 { color: #1DB954; margin-bottom: 16px; }
+        .search-bar { display: flex; gap: 10px; margin-bottom: 24px; }
+        input { flex: 1; padding: 14px 18px; border-radius: 25px; border: 1px solid #333; background: #242424; color: #fff; outline: none; }
+        button { padding: 14px 24px; border-radius: 25px; border: none; background: #1DB954; color: #fff; font-weight: bold; cursor: pointer; }
+        .card { display: flex; align-items: center; gap: 16px; background: #181818; padding: 12px; margin-bottom: 10px; border-radius: 8px; cursor: pointer; }
+        .card:hover { background: #282828; }
+        .card img { width: 56px; height: 56px; border-radius: 6px; }
+        .card-info { flex: 1; }
+        .player-panel { position: fixed; bottom: 0; left: 0; right: 0; background: #181818; border-top: 1px solid #282828; padding: 16px 20px; display: flex; align-items: center; gap: 20px; }
+        audio { flex: 1; }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <h1>🎵 Spotify Lite (開源完整版)</h1>
-    </div>
+    <h1>🎵 Spotify Lite (Flask 後端穩定版)</h1>
 
     <div class="search-bar">
-        <input type="text" id="searchInput" placeholder="搜尋音樂 (例如: pop, rock, electronic, jazz)...">
-        <button class="src-btn" id="searchBtn">搜尋</button>
+        <input type="text" id="searchInput" placeholder="搜尋歌曲或歌手 (例如: sugar, 周杰倫)...">
+        <button id="searchBtn">搜尋</button>
     </div>
 
-    <div class="section-title">搜尋結果</div>
     <div id="results"></div>
 
-    <!-- 底部播放面板 -->
     <div class="player-panel">
-        <div class="player-left">
-            <img id="current-cover" src="https://via.placeholder.com/50?text=Music" alt="封面">
-            <div class="player-info">
-                <div id="current-title" class="player-title">尚未播放</div>
-                <div id="current-artist" class="player-artist">點擊列表歌曲即可開始播放</div>
-            </div>
+        <div style="min-width: 180px;">
+            <div id="current-title" style="font-weight: bold; font-size: 14px;">尚未播放</div>
+            <div id="current-artist" style="color: #b3b3b3; font-size: 12px;">點擊歌曲開始播放</div>
         </div>
-
         <audio id="audio-player" controls autoplay></audio>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const searchInput = document.getElementById('searchInput');
-            const searchBtn = document.getElementById('searchBtn');
-            const resultsContainer = document.getElementById('results');
-            const audioPlayer = document.getElementById('audio-player');
+        const searchInput = document.getElementById('searchInput');
+        const searchBtn = document.getElementById('searchBtn');
+        const resultsContainer = document.getElementById('results');
+        const audioPlayer = document.getElementById('audio-player');
 
-            searchInput.addEventListener('keyup', (e) => {
-                if (e.key === 'Enter') runSearch();
+        async function runSearch() {
+            const query = searchInput.value.trim();
+            if (!query) return;
+
+            resultsContainer.innerHTML = '<p style="color:#1DB954;">⏳ 搜尋中...</p>';
+
+            // 使用 iTunes API 抓取歌曲資訊與高畫質封面
+            const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=15`);
+            const data = await res.json();
+            
+            resultsContainer.innerHTML = '';
+            data.results.forEach(song => {
+                const div = document.createElement('div');
+                div.className = 'card';
+                div.innerHTML = `
+                    <img src="${song.artworkUrl100.replace('100x100bb', '300x300bb')}">
+                    <div class="card-info">
+                        <div><b>${song.trackName}</b></div>
+                        <div style="color:#aaa; font-size:13px;">${song.artistName}</div>
+                    </div>
+                    <button style="padding:8px 16px; font-size:12px;">▶ 播放完整版</button>
+                `;
+                div.onclick = () => playSong(song.artistName, song.trackName, div.querySelector('button'));
+                resultsContainer.appendChild(div);
             });
+        }
 
-            searchBtn.addEventListener('click', runSearch);
+        async function playSong(artist, title, btnEl) {
+            const originalText = btnEl.innerText;
+            btnEl.innerText = "⏳ 載入完整音訊...";
+            document.getElementById('current-title').innerText = title;
+            document.getElementById('current-artist').innerText = artist;
 
-            // 使用 Jamendo 公開音樂庫 API 進行搜尋
-            async function fetchMusic(query) {
-                const clientId = '59392e21'; // Jamendo 公開測試金鑰
-                const url = `https://api.jamendo.com/v3.0/tracks/?client_id=${clientId}&format=json&limit=20&namesearch=${encodeURIComponent(query)}`;
-                
-                const response = await fetch(url);
-                if (!response.ok) throw new Error("網路連線失敗");
-                const data = await response.json();
-                
-                return (data.results || []).map(item => ({
-                    title: item.name || "未知歌名",
-                    artist: item.artist_name || "未知歌手",
-                    cover: item.album_image || item.image || 'https://via.placeholder.com/300',
-                    audioUrl: item.audio // 100% 穩定的完整歌曲 MP3 串流網址
-                }));
-            }
+            try {
+                // 呼叫我們自己的 Flask 後端 API 獲取音訊串流
+                const res = await fetch(`/api/get_audio?q=${encodeURIComponent(artist + ' ' + title + ' audio')}`);
+                const data = await res.json();
 
-            // 執行搜尋
-            async function runSearch() {
-                const query = searchInput.value.trim();
-                if (!query) return alert("請輸入關鍵字！");
-
-                resultsContainer.innerHTML = '<p style="color:#1DB954;">⏳ 正在搜尋音樂庫...</p>';
-
-                try {
-                    const songs = await fetchMusic(query);
-                    resultsContainer.innerHTML = '';
-
-                    if (songs.length === 0) {
-                        resultsContainer.innerHTML = '<p style="color:#888;">❌ 找不到相關歌曲，請嘗試換個英文關鍵字（例如 pop, electronic）。</p>';
-                        return;
-                    }
-
-                    songs.forEach(song => {
-                        const div = document.createElement('div');
-                        div.className = 'card';
-                        div.innerHTML = `
-                            <img src="${song.cover}" onerror="this.src='https://via.placeholder.com/56'">
-                            <div class="card-info">
-                                <div class="card-title">${song.title}</div>
-                                <div class="card-artist">${song.artist}</div>
-                            </div>
-                            <button class="play-btn-ic">▶ 播放完整版</button>
-                        `;
-                        div.onclick = () => playSong(song, div.querySelector('.play-btn-ic'));
-                        resultsContainer.appendChild(div);
-                    });
-                } catch (err) {
-                    console.error(err);
-                    resultsContainer.innerHTML = '<p style="color:red;">搜尋失敗，請檢查網路連線。</p>';
+                if (data.audio_url) {
+                    audioPlayer.src = data.audio_url;
+                    audioPlayer.play();
+                    btnEl.innerText = "♪ 播放中";
+                } else {
+                    alert("無法獲取音訊串流");
+                    btnEl.innerText = originalText;
                 }
+            } catch (err) {
+                alert("後端連線失敗！");
+                btnEl.innerText = originalText;
             }
+        }
 
-            // 點擊播放完整音樂
-            function playSong(song, btnEl) {
-                document.getElementById('current-title').innerText = song.title;
-                document.getElementById('current-artist').innerText = song.artist;
-                document.getElementById('current-cover').src = song.cover;
-
-                audioPlayer.src = song.audioUrl;
-                audioPlayer.play();
-                
-                document.querySelectorAll('.play-btn-ic').forEach(b => b.innerText = "▶ 播放完整版");
-                btnEl.innerText = "♪ 播放中";
-            }
-        });
+        searchBtn.onclick = runSearch;
+        searchInput.onkeyup = (e) => { if (e.key === 'Enter') runSearch(); };
     </script>
 </body>
 </html>
