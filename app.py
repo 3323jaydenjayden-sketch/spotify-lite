@@ -1,10 +1,10 @@
 import os
 from flask import Flask, render_template_string, request, jsonify
-import yt_dlp
+import requests
 
 app = Flask(__name__)
 
-# 將 HTML/CSS/JS 內嵌在 Python 中，徹底擺脫外部 index.html 與路徑報錯問題
+# 將 HTML/CSS/JS 內嵌在 Python 中
 HTML_CONTENT = """
 <!DOCTYPE html>
 <html lang="zh-TW">
@@ -147,28 +147,44 @@ def get_audio():
     if not query:
         return jsonify({'error': 'No query provided'}), 400
 
-    ydl_opts = {
-        'format': 'bestaudio/best',
-        'noplaylist': True,
-        'quiet': True,
-        'default_search': 'ytsearch1:',
-        # 關鍵性修復：將 yt-dlp 模擬為 iOS 與行動版網頁客戶端，繞過 YouTube 的 Bot / Sign in 驗證
-        'extractor_args': {
-            'youtube': {
-                'player_client': ['ios', 'mweb']
-            }
-        }
-    }
+    # 公開的 Piped / Invidious API 節點列表（防封鎖備援機制）
+    piped_instances = [
+        "https://pipedapi.kavin.rocks",
+        "https://api.piped.video",
+        "https://pipedapi.mha.fi"
+    ]
 
-    try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(query, download=False)
-            if 'entries' in info and len(info['entries']) > 0:
-                audio_url = info['entries'][0]['url']
+    for instance in piped_instances:
+        try:
+            # 1. 搜尋影片
+            search_res = requests.get(f"{instance}/search?q={query}&filter=music_songs", timeout=5)
+            if search_res.status_code != 200:
+                continue
+            
+            search_data = search_res.json()
+            items = search_data.get('items', [])
+            if not items:
+                continue
+
+            # 取出第一個影片的 videoId
+            video_id = items[0]['url'].split('=')[-1]
+
+            # 2. 獲取音訊串流網址
+            streams_res = requests.get(f"{instance}/streams/{video_id}", timeout=5)
+            if streams_res.status_code != 200:
+                continue
+
+            streams_data = streams_res.json()
+            audio_streams = streams_data.get('audioStreams', [])
+            
+            if audio_streams:
+                # 拿高音質音訊串流網址
+                audio_url = audio_streams[0]['url']
                 return jsonify({'audio_url': audio_url})
-            return jsonify({'error': 'Not found'}), 404
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        except Exception:
+            continue
+
+    return jsonify({'error': '無法從第三方節點取得音樂，請稍後再試'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
