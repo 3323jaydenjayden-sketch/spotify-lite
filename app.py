@@ -1,33 +1,145 @@
 import os
-from flask import Flask, render_template, render_template_string, request, jsonify
+from flask import Flask, render_template_string, request, jsonify
 import yt_dlp
 
-base_dir = os.path.abspath(os.path.dirname(__file__))
+app = Flask(__name__)
 
-# 找出目錄下所有的 index.html 絕對路徑（不管它藏在 templates 還是 static 還是子資料夾）
-index_file_path = None
-for root, dirs, files in os.walk(base_dir):
-    for file in files:
-        if file.lower() == 'index.html':
-            index_file_path = os.path.join(root, file)
-            break
-    if index_file_path:
-        break
+# 直接將 HTML/CSS/JS 內嵌在 Python 程式碼中，不需要任何外部 index.html 檔案
+HTML_CONTENT = """
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spotify Lite</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            background-color: #181818;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 450px;
+            text-align: center;
+        }
+        h1 {
+            color: #1db954;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 12px 15px;
+            border-radius: 20px;
+            border: none;
+            outline: none;
+            background-color: #282828;
+            color: #fff;
+            font-size: 14px;
+        }
+        button {
+            background-color: #1db954;
+            color: #000;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s, background-color 0.2s;
+        }
+        button:active {
+            transform: scale(0.95);
+        }
+        button:disabled {
+            background-color: #535353;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-bottom: 15px;
+            font-size: 14px;
+            color: #b3b3b3;
+            min-height: 20px;
+        }
+        audio {
+            width: 100%;
+            margin-top: 10px;
+            outline: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Spotify Lite</h1>
+        <div class="search-box">
+            <input type="text" id="query" placeholder="輸入歌名或歌手..." onkeypress="if(event.key==='Enter') searchAudio()">
+            <button id="searchBtn" onclick="searchAudio()">搜尋</button>
+        </div>
+        <div id="status" class="status"></div>
+        <audio id="audioPlayer" controls style="display:none;"></audio>
+    </div>
 
-template_folder = os.path.dirname(index_file_path) if index_file_path else base_dir
-app = Flask(__name__, template_folder=template_folder, static_folder=os.path.join(base_dir, 'static'))
+    <script>
+        async function searchAudio() {
+            const queryInput = document.getElementById('query');
+            const searchBtn = document.getElementById('searchBtn');
+            const status = document.getElementById('status');
+            const player = document.getElementById('audioPlayer');
+            
+            const q = queryInput.value.trim();
+            if (!q) return;
+
+            searchBtn.disabled = true;
+            status.innerText = '正在尋找音樂來源...';
+            player.style.display = 'none';
+            player.pause();
+
+            try {
+                const response = await fetch(`/api/get_audio?q=${encodeURIComponent(q)}`);
+                const data = await response.json();
+
+                if (response.ok && data.audio_url) {
+                    status.innerText = '找到音樂，開始播放！';
+                    player.src = data.audio_url;
+                    player.style.display = 'block';
+                    player.play();
+                } else {
+                    status.innerText = '錯誤: ' + (data.error || '找不到音訊來源');
+                }
+            } catch (err) {
+                status.innerText = '連線失敗，請稍後再試。';
+            } finally {
+                searchBtn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
+"""
 
 @app.route('/')
 def index():
-    # 優先嘗試標準 render_template
-    try:
-        return render_template('index.html')
-    except Exception:
-        # 萬一 Flask 模板引擎失敗，直接讀取檔案內容回傳（防摔備案）
-        if index_file_path and os.path.exists(index_file_path):
-            with open(index_file_path, 'r', encoding='utf-8') as f:
-                return render_template_string(f.read())
-        return "<h3>Error: index.html 檔案不存在，請檢查專案目錄結構。</h3>", 500
+    return render_template_string(HTML_CONTENT)
 
 @app.route('/api/get_audio')
 def get_audio():
