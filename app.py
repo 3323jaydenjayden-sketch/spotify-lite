@@ -1,15 +1,13 @@
 import os
 from flask import Flask, render_template, request, jsonify
+import yt_dlp
 
-# 取得目前 app.py 所在資料夾的絕對路徑
-base_dir = os.path.dirname(os.path.abspath(__file__))
+# 強制計算 templates 資料夾的絕對路徑，避免主機找不到
+base_dir = os.path.abspath(os.path.dirname(__file__))
+template_dir = os.path.join(base_dir, 'templates')
+static_dir = os.path.join(base_dir, 'static')
 
-# 顯式指定 template 和 static 的絕對路徑
-app = Flask(
-    __name__,
-    template_folder=os.path.join(base_dir, 'templates'),
-    static_folder=os.path.join(base_dir, 'static')
-)
+app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
 
 @app.route('/')
 def index():
@@ -29,7 +27,6 @@ def get_audio():
     }
 
     try:
-        import yt_dlp
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(query, download=False)
             if 'entries' in info and len(info['entries']) > 0:
