@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spotify Lite - 終極完整版</title>
+    <title>Spotify Lite - 完整版</title>
     <style>
         * { 
             box-sizing: border-box; 
@@ -180,11 +180,11 @@
 <body>
 
     <div class="header">
-        <h1>🎵 Spotify Lite (終極完整版)</h1>
+        <h1>🎵 Spotify Lite (開源完整版)</h1>
     </div>
 
     <div class="search-bar">
-        <input type="text" id="searchInput" placeholder="搜尋歌曲或歌手 (例如: sugar, 周杰倫)...">
+        <input type="text" id="searchInput" placeholder="搜尋音樂 (例如: pop, rock, electronic, jazz)...">
         <button class="src-btn" id="searchBtn">搜尋</button>
     </div>
 
@@ -217,62 +217,27 @@
 
             searchBtn.addEventListener('click', runSearch);
 
-            // 1. 使用 iTunes 抓取正確歌名、歌手、高品質封面
+            // 使用 Jamendo 公開音樂庫 API 進行搜尋
             async function fetchMusic(query) {
-                const url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=15`;
+                const clientId = '59392e21'; // Jamendo 公開測試金鑰
+                const url = `https://api.jamendo.com/v3.0/tracks/?client_id=${clientId}&format=json&limit=20&namesearch=${encodeURIComponent(query)}`;
+                
                 const response = await fetch(url);
                 if (!response.ok) throw new Error("網路連線失敗");
                 const data = await response.json();
                 
                 return (data.results || []).map(item => ({
-                    title: item.trackName || "未知歌名",
-                    artist: item.artistName || "未知歌手",
-                    cover: item.artworkUrl100 ? item.artworkUrl100.replace('100x100bb', '300x300bb') : 'https://via.placeholder.com/300',
-                    query: `${item.artistName} ${item.trackName}`
+                    title: item.name || "未知歌名",
+                    artist: item.artist_name || "未知歌手",
+                    cover: item.album_image || item.image || 'https://via.placeholder.com/300',
+                    audioUrl: item.audio // 100% 穩定的完整歌曲 MP3 串流網址
                 }));
-            }
-
-            // 2. 多重開源音訊節點 (Invidious / Piped API) 解析直連 `.m4a` / `.webm` 音訊串流檔
-            async function getAudioStreamUrl(searchQuery) {
-                // 節點列表，若單一節點失效會自動 failover 到下一組
-                const apis = [
-                    `https://pipedapi.kavin.rocks/search?q=${encodeURIComponent(searchQuery)}&filter=music_songs`,
-                    `https://api.piped.yt/search?q=${encodeURIComponent(searchQuery)}&filter=music_songs`,
-                    `https://pipedapi.tokhmi.xyz/search?q=${encodeURIComponent(searchQuery)}&filter=music_songs`
-                ];
-
-                for (let api of apis) {
-                    try {
-                        const res = await fetch(api);
-                        if (!res.ok) continue;
-                        const data = await res.json();
-                        
-                        if (data.items && data.items.length > 0) {
-                            const videoId = data.items[0].url.split('v=')[1];
-                            
-                            // 獲取該影片的直接 audio 串流 URL
-                            const streamApi = api.replace('/search', '/streams');
-                            const streamRes = await fetch(`${streamApi.split('?')[0]}/${videoId}`);
-                            if (!streamRes.ok) continue;
-                            const streamData = await streamRes.json();
-                            
-                            // 篩選出純音訊串流 (Audio Streams)
-                            if (streamData.audioStreams && streamData.audioStreams.length > 0) {
-                                // 優先選取音質最佳的音訊檔
-                                return streamData.audioStreams[0].url;
-                            }
-                        }
-                    } catch (e) {
-                        console.warn("備用音訊節點切換中...");
-                    }
-                }
-                return null;
             }
 
             // 執行搜尋
             async function runSearch() {
                 const query = searchInput.value.trim();
-                if (!query) return alert("請輸入歌名或歌手！");
+                if (!query) return alert("請輸入關鍵字！");
 
                 resultsContainer.innerHTML = '<p style="color:#1DB954;">⏳ 正在搜尋音樂庫...</p>';
 
@@ -281,7 +246,7 @@
                     resultsContainer.innerHTML = '';
 
                     if (songs.length === 0) {
-                        resultsContainer.innerHTML = '<p style="color:#888;">❌ 找不到相關歌曲，請嘗試更換關鍵字。</p>';
+                        resultsContainer.innerHTML = '<p style="color:#888;">❌ 找不到相關歌曲，請嘗試換個英文關鍵字（例如 pop, electronic）。</p>';
                         return;
                     }
 
@@ -305,25 +270,17 @@
                 }
             }
 
-            // 點擊播放完整音訊
-            async function playSong(song, btnEl) {
-                const originalText = btnEl.innerText;
-                btnEl.innerText = "⏳ 解析音訊中...";
-
+            // 點擊播放完整音樂
+            function playSong(song, btnEl) {
                 document.getElementById('current-title').innerText = song.title;
                 document.getElementById('current-artist').innerText = song.artist;
                 document.getElementById('current-cover').src = song.cover;
 
-                const audioUrl = await getAudioStreamUrl(song.query);
-
-                if (audioUrl) {
-                    audioPlayer.src = audioUrl;
-                    audioPlayer.play();
-                    btnEl.innerText = "♪ 播放中";
-                } else {
-                    alert("無法解析該歌曲音訊，請再試一次或換其他版本！");
-                    btnEl.innerText = originalText;
-                }
+                audioPlayer.src = song.audioUrl;
+                audioPlayer.play();
+                
+                document.querySelectorAll('.play-btn-ic').forEach(b => b.innerText = "▶ 播放完整版");
+                btnEl.innerText = "♪ 播放中";
             }
         });
     </script>
