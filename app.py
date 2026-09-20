@@ -1,8 +1,15 @@
+import os
 from flask import Flask, render_template, request, jsonify
-import yt_dlp
 
-app = Flask(__name__, template_folder='static/templates', static_folder='static')
+# 取得目前 app.py 所在資料夾的絕對路徑
+base_dir = os.path.dirname(os.path.abspath(__file__))
 
+# 顯式指定 template 和 static 的絕對路徑
+app = Flask(
+    __name__,
+    template_folder=os.path.join(base_dir, 'templates'),
+    static_folder=os.path.join(base_dir, 'static')
+)
 
 @app.route('/')
 def index():
@@ -14,7 +21,6 @@ def get_audio():
     if not query:
         return jsonify({'error': 'No query provided'}), 400
 
-    # 使用 yt-dlp 在伺服器端直接提取 YouTube 音訊直連網址
     ydl_opts = {
         'format': 'bestaudio/best',
         'noplaylist': True,
@@ -23,6 +29,7 @@ def get_audio():
     }
 
     try:
+        import yt_dlp
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(query, download=False)
             if 'entries' in info and len(info['entries']) > 0:
@@ -33,4 +40,4 @@ def get_audio():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5000)
