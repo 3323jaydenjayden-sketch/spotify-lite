@@ -16,7 +16,7 @@
             color: #fff; 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
             padding: 20px; 
-            padding-bottom: 220px; 
+            padding-bottom: 240px; 
         }
 
         .header h1 { 
@@ -164,7 +164,7 @@
 
         .iframe-container {
             width: 100%;
-            height: 90px;
+            height: 100px;
             border-radius: 8px;
             overflow: hidden;
             background: #000;
@@ -183,7 +183,7 @@
     </div>
 
     <div class="search-bar">
-        <input type="text" id="searchInput" placeholder="搜尋完整歌曲或歌手 (例如: sugar, 周杰倫)...">
+        <input type="text" id="searchInput" placeholder="搜尋歌曲或歌手 (例如: sugar, 周杰倫)...">
         <button class="src-btn" id="searchBtn">搜尋</button>
     </div>
 
@@ -201,7 +201,7 @@
         </div>
         
         <div class="iframe-container">
-            <iframe id="yt-player" src="about:blank" allow="autoplay; encrypted-media"></iframe>
+            <iframe id="sc-player" src="about:blank" allow="autoplay"></iframe>
         </div>
     </div>
 
@@ -210,7 +210,7 @@
             const searchInput = document.getElementById('searchInput');
             const searchBtn = document.getElementById('searchBtn');
             const resultsContainer = document.getElementById('results');
-            const ytPlayer = document.getElementById('yt-player');
+            const scPlayer = document.getElementById('sc-player');
 
             searchInput.addEventListener('keyup', (e) => {
                 if (e.key === 'Enter') runSearch();
@@ -218,7 +218,7 @@
 
             searchBtn.addEventListener('click', runSearch);
 
-            // 使用官方穩定且無 CORS 限制的 iTunes 搜尋 API 抓取高畫質封面與正確歌曲資訊
+            // 使用 iTunes API 進行無跨域問題的搜尋
             async function fetchMusic(query) {
                 const url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=15`;
                 const response = await fetch(url);
@@ -269,15 +269,17 @@
                 }
             }
 
-            // 點擊音樂卡片後，自動以 YouTube Embed 播放完整歌曲
+            // 點擊歌曲後，使用 SoundCloud 官方內嵌播放器播放完整音樂，不會受到 YouTube 的權限攔截
             function playSong(song) {
                 document.getElementById('track-title').innerText = song.title;
                 document.getElementById('track-artist').innerText = song.artist;
                 document.getElementById('cover').src = song.cover;
 
-                // 使用 YouTube 官方免 API Key 的 Embed 搜尋嵌入，100% 成功載入且無跨域問題
-                const embedUrl = `https://www.youtube-nocookie.com/embed?listType=search&list=${encodeURIComponent(song.searchQuery)}&autoplay=1`;
-                ytPlayer.src = embedUrl;
+                // SoundCloud 官方 Player Widget API
+                const targetUrl = `https://soundcloud.com/search/sounds?q=${encodeURIComponent(song.searchQuery)}`;
+                const embedUrl = `https://w.soundcloud.com/player/?url=${encodeURIComponent(targetUrl)}&auto_play=true&hide_related=true&show_comments=false&show_user=true&show_reposts=false&visual=false&theme_color=1DB954`;
+                
+                scPlayer.src = embedUrl;
             }
         });
     </script>
