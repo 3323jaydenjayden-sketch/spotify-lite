@@ -2,7 +2,7 @@ import os
 from flask import Flask, render_template, request, jsonify
 import yt_dlp
 
-# 強制計算 templates 資料夾的絕對路徑，避免主機找不到
+# 使用絕對路徑，確保無論伺服器從哪個目錄啟動都能精準抓到 templates 與 static
 base_dir = os.path.abspath(os.path.dirname(__file__))
 template_dir = os.path.join(base_dir, 'templates')
 static_dir = os.path.join(base_dir, 'static')
