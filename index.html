@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spotify Lite - 完整版</title>
+    <title>Spotify Lite - 完整版播放器</title>
     <style>
         * { 
             box-sizing: border-box; 
@@ -16,7 +16,7 @@
             color: #fff; 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
             padding: 20px; 
-            padding-bottom: 240px; 
+            padding-bottom: 180px; 
         }
 
         .header h1 { 
@@ -127,29 +127,67 @@
             right: 0; 
             background: #181818; 
             border-top: 1px solid #282828; 
-            padding: 12px 20px; 
+            padding: 16px 20px; 
             z-index: 999;
             box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            gap: 16px;
         }
 
-        .iframe-container {
-            width: 100%;
-            height: 80px;
-            border-radius: 12px;
-            overflow: hidden;
-            background: #121212;
+        .player-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 260px;
         }
-        iframe {
+
+        .player-left img {
+            width: 50px;
+            height: 50px;
+            border-radius: 6px;
+            object-fit: cover;
+        }
+
+        .player-info {
+            overflow: hidden;
+        }
+
+        .player-title {
+            font-size: 14px;
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .player-artist {
+            font-size: 12px;
+            color: #b3b3b3;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* 將影片區域縮小並隱藏成精美音訊卡片 */
+        .player-center {
+            flex: 1;
+            height: 60px;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #000;
+        }
+
+        #yt-player-element {
             width: 100%;
             height: 100%;
-            border: none;
         }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <h1>🎵 Spotify Lite (完整版)</h1>
+        <h1>🎵 Spotify Lite (方案 C 完整版)</h1>
     </div>
 
     <div class="search-bar">
@@ -160,19 +198,49 @@
     <div class="section-title">搜尋結果</div>
     <div id="results"></div>
 
-    <!-- 底部音樂播放控制面板 -->
+    <!-- 底部播放面板 -->
     <div class="player-panel">
-        <div class="iframe-container">
-            <iframe id="spotify-player" src="about:blank" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+        <div class="player-left">
+            <img id="current-cover" src="https://via.placeholder.com/50?text=Music" alt="封面">
+            <div class="player-info">
+                <div id="current-title" class="player-title">尚未播放</div>
+                <div id="current-artist" class="player-artist">點擊列表歌曲開始播放完整版</div>
+            </div>
+        </div>
+
+        <div class="player-center">
+            <div id="yt-player-element"></div>
         </div>
     </div>
 
+    <!-- 載入 YouTube 官方 API 腳本 -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+
     <script>
+        let ytPlayer = null;
+        let isApiReady = false;
+
+        // YouTube API 初始化完成回呼
+        function onYouTubeIframeAPIReady() {
+            ytPlayer = new YT.Player('yt-player-element', {
+                height: '100%',
+                width: '100%',
+                playerVars: {
+                    'autoplay': 1,
+                    'controls': 1,
+                    'modestbranding': 1,
+                    'rel': 0
+                },
+                events: {
+                    'onReady': () => { isApiReady = true; }
+                }
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             const searchInput = document.getElementById('searchInput');
             const searchBtn = document.getElementById('searchBtn');
             const resultsContainer = document.getElementById('results');
-            const spotifyPlayer = document.getElementById('spotify-player');
 
             searchInput.addEventListener('keyup', (e) => {
                 if (e.key === 'Enter') runSearch();
@@ -180,7 +248,7 @@
 
             searchBtn.addEventListener('click', runSearch);
 
-            // 100% 穩定免金鑰 iTunes 搜尋 API
+            // 搜尋 Apple / iTunes 免費庫取得精準元數據
             async function fetchMusic(query) {
                 const url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=15`;
                 const response = await fetch(url);
@@ -191,8 +259,27 @@
                     title: item.trackName || "未知歌名",
                     artist: item.artistName || "未知歌手",
                     cover: item.artworkUrl100 ? item.artworkUrl100.replace('100x100bb', '300x300bb') : 'https://via.placeholder.com/300',
-                    query: `${item.artistName} ${item.trackName}`
+                    query: `${item.artistName} ${item.trackName} audio`
                 }));
+            }
+
+            // 透過公開的第三方無 CORS 介面將「歌名」轉為可播放的「YouTube Video ID」
+            async function getYouTubeVideoId(searchQuery) {
+                try {
+                    const res = await fetch(`https://pipedapi.kavin.rocks/search?q=${encodeURIComponent(searchQuery)}&filter=music_songs`);
+                    const data = await res.json();
+                    if (data.items && data.items.length > 0) {
+                        // 取得第一筆音訊的 ID
+                        return data.items[0].url.split('v=')[1];
+                    }
+                } catch (e) {
+                    console.log("備用頻道解析...");
+                }
+
+                // 備用解析頻道，確保雙重保險
+                const fallbackRes = await fetch(`https://api.viddl.is/search?q=${encodeURIComponent(searchQuery)}`);
+                const fallbackData = await fallbackRes.json();
+                return fallbackData[0]?.id || null;
             }
 
             // 執行搜尋
@@ -222,7 +309,7 @@
                             </div>
                             <button class="play-btn-ic">▶ 播放完整版</button>
                         `;
-                        div.onclick = () => playSong(song);
+                        div.onclick = () => playSong(song, div.querySelector('.play-btn-ic'));
                         resultsContainer.appendChild(div);
                     });
                 } catch (err) {
@@ -231,11 +318,25 @@
                 }
             }
 
-            // 點擊後直接嵌入 Spotify 官方 Embed 播放器
-            function playSong(song) {
-                // 使用 Spotify Open Embed 服務直接產生合法播放卡片
-                const spotifyEmbedUrl = `https://open.spotify.com/embed/search/${encodeURIComponent(song.query)}?utm_source=generator&theme=0`;
-                spotifyPlayer.src = spotifyEmbedUrl;
+            // 點擊歌曲並播放
+            async function playSong(song, btnEl) {
+                const originalText = btnEl.innerText;
+                btnEl.innerText = "⏳ 載入中...";
+
+                document.getElementById('current-title').innerText = song.title;
+                document.getElementById('current-artist').innerText = song.artist;
+                document.getElementById('current-cover').src = song.cover;
+
+                const videoId = await getYouTubeVideoId(song.query);
+
+                if (videoId && ytPlayer && isApiReady) {
+                    // 使用官方 JS API 加載影片，能避開一般 iframe 搜尋頁面的 embed 封鎖限制
+                    ytPlayer.loadVideoById(videoId);
+                    btnEl.innerText = "♪ 播放中";
+                } else {
+                    alert("無法獲取該歌曲的完整版音訊，請嘗試點擊其他版本！");
+                    btnEl.innerText = originalText;
+                }
             }
         });
     </script>
