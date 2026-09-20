@@ -4,7 +4,7 @@ import yt_dlp
 
 app = Flask(__name__)
 
-# 直接將 HTML/CSS/JS 內嵌在 Python 程式碼中，不需要任何外部 index.html 檔案
+# 將 HTML/CSS/JS 內嵌在 Python 中，徹底擺脫外部 index.html 與路徑報錯問題
 HTML_CONTENT = """
 <!DOCTYPE html>
 <html lang="zh-TW">
@@ -151,7 +151,13 @@ def get_audio():
         'format': 'bestaudio/best',
         'noplaylist': True,
         'quiet': True,
-        'default_search': 'ytsearch1:'
+        'default_search': 'ytsearch1:',
+        # 關鍵性修復：將 yt-dlp 模擬為 iOS 與行動版網頁客戶端，繞過 YouTube 的 Bot / Sign in 驗證
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['ios', 'mweb']
+            }
+        }
     }
 
     try:
