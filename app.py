@@ -1,17 +1,33 @@
 import os
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, render_template_string, request, jsonify
 import yt_dlp
 
-# 使用絕對路徑，確保無論伺服器從哪個目錄啟動都能精準抓到 templates 與 static
 base_dir = os.path.abspath(os.path.dirname(__file__))
-template_dir = os.path.join(base_dir, 'templates')
-static_dir = os.path.join(base_dir, 'static')
 
-app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
+# 找出目錄下所有的 index.html 絕對路徑（不管它藏在 templates 還是 static 還是子資料夾）
+index_file_path = None
+for root, dirs, files in os.walk(base_dir):
+    for file in files:
+        if file.lower() == 'index.html':
+            index_file_path = os.path.join(root, file)
+            break
+    if index_file_path:
+        break
+
+template_folder = os.path.dirname(index_file_path) if index_file_path else base_dir
+app = Flask(__name__, template_folder=template_folder, static_folder=os.path.join(base_dir, 'static'))
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    # 優先嘗試標準 render_template
+    try:
+        return render_template('index.html')
+    except Exception:
+        # 萬一 Flask 模板引擎失敗，直接讀取檔案內容回傳（防摔備案）
+        if index_file_path and os.path.exists(index_file_path):
+            with open(index_file_path, 'r', encoding='utf-8') as f:
+                return render_template_string(f.read())
+        return "<h3>Error: index.html 檔案不存在，請檢查專案目錄結構。</h3>", 500
 
 @app.route('/api/get_audio')
 def get_audio():
